@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pth
+*.pt
+.DS_Store
+*.ipynb
+.vscode/
+.idea/
+*.log
+
+# Modal
+modal_local/
+volume_snapshot/
