@@ -4,7 +4,7 @@
 
 **A Mechanistic Study of Where and Why It Fails**
 
-[![Paper](https://img.shields.io/badge/paper-PDF-red)](paper/holographic_memory_paper_FINAL.tex)
+[![Paper](https://img.shields.io/badge/paper-PDF-red)](paper/holographic_memory_paper_FINAL.pdf)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](requirements.txt)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Results](https://img.shields.io/badge/results-5%20seeds-orange)](results/final_results.json)
@@ -115,7 +115,7 @@ modal run modal/modal_experiment1.py --seed 42      # single seed
 modal run modal/modal_experiment1.py --all-seeds    # 5 seeds parallel
 ```
 
-All results: `results/final_results.json`, `results/phase_error_results.json`, `results/results_inference_ablations.json`
+All results: `results/final_results.json`, `results/phase_error_results.json`, `results/results_inference_ablations.json`, `results/hop1_probe/` (5 seeds), `results/hop2_atomic_probe/` (5 seeds)
 
 ---
 
@@ -127,9 +127,17 @@ modal/                          Modal A10G experiment scripts
   final_analysis.py             Aggregated analysis
   phase_error_analysis.py       Phase decorrelation measurement
   modal_inference_ablations.py  Ablation + probes + beta sweep
+  modal_hop1_probe.py           Hop-1 phase probe across all seeds
+  modal_hop2_atomic_probe.py    Hop-2 atomic probe across all seeds
 paper/
-  holographic_memory_paper_FINAL.tex   Self-contained LaTeX (TikZ figures)
+  holographic_memory_paper_FINAL.tex   LaTeX source (TikZ figures)
+  holographic_memory_paper_FINAL.pdf   Compiled PDF
 results/                        5-seed experiment outputs (JSON)
+  final_results.json            Atomic + zero-shot metrics
+  phase_error_results.json      Phase error analysis
+  results_inference_ablations.json  Ablation + probes
+  hop1_probe/                   Hop-1 phase probe per seed
+  hop2_atomic_probe/            Hop-2 atomic probe per seed
 figures/                        Publication-quality figures (PNG)
 README.md
 requirements.txt

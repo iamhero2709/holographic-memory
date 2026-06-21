@@ -2,8 +2,7 @@
 
 % ============================================================
 %  Holographic Memory for Compositional KG Reasoning
-%  FINAL -- self-contained (all figures are TikZ/PGFPlots, no external images)
-%  Compiles on Overleaf out of the box.
+%  FINAL VERSION FOR ARXIV SUBMISSION
 % ============================================================
 
 \usepackage[utf8]{inputenc}
@@ -16,35 +15,52 @@
 \usepackage{url}
 \usepackage{authblk}
 \usepackage{geometry}
-\geometry{a4paper, margin=1in}
+\geometry{a4paper, margin=1in, bottom=1.1in}
+\raggedbottom
+
+\usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
+\captionsetup{font=small, labelfont=bf}
 \usepackage{enumitem}
 \usepackage{bm}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 
-% Figures: TikZ + PGFPlots (fully self-contained, no .png needed)
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, fit, backgrounds, calc, shapes.geometric}
+% Theorem-like environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
 \usepackage{pgfplots}
-\pgfplotsset{compat=1.17}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, backgrounds, calc,
+                shapes.geometric, decorations.pathreplacing}
 
-% hyperref last
 \usepackage[hidelinks]{hyperref}
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\hypersetup{colorlinks=true, linkcolor=blue!70!black,
+            citecolor=blue!70!black, urlcolor=blue!70!black}
 
-% Math shortcuts
+% ---- Math shortcuts ----
 \newcommand{\bind}{\circledast}
 \newcommand{\unbind}{\oslash}
 \newcommand{\Rb}{\mathbb{R}}
 \newcommand{\Cb}{\mathbb{C}}
+\newcommand{\ev}[1]{\mathbf{e}_{#1}}
+\newcommand{\rv}[1]{\boldsymbol{\rho}_{#1}}
+\newcommand{\mem}{\mathbf{M}}
 \DeclareMathOperator*{\argmaxop}{arg\,max}
 \DeclareMathOperator{\softmaxop}{softmax}
 \DeclareMathOperator{\cleanupop}{clean}
+\DeclareMathOperator{\Real}{Re}
 
-\title{\textbf{Holographic Memory for Zero-Shot Compositional\\
-Reasoning in Knowledge Graphs:\\
+\title{\textbf{Holographic Memory for Zero-Shot Compositional\\[2pt]
+Reasoning in Knowledge Graphs:\\[4pt]
 A Mechanistic Study of Where and Why It Fails}}
 
 \author[1]{Randhir Kumar}
@@ -56,97 +72,108 @@ A Mechanistic Study of Where and Why It Fails}}
 \maketitle
 
 \begin{abstract}
-Knowledge graph embedding (KGE) models such as TransE, DistMult, ComplEx and
-RotatE achieve strong single-hop link prediction but are not designed to answer
-\emph{zero-shot compositional} queries: multi-hop questions whose relation chain
-was never observed during training. Holographic Reduced Representations (HRR),
-which bind and unbind symbols through circular convolution, are a theoretically
-appealing candidate for such reasoning because binding is approximately
-invertible and composable. We conduct a controlled study of two holographic
-memory variants---real-valued HRR and phase-only Fourier HRR (FHRR)---each paired
-with a modern Hopfield cleanup, on the full FB15k-237 test set over five random
-seeds. We report three findings. First, both variants are competitive
-\emph{atomic} retrievers in the ranking sense: real HRR attains a filtered MRR of
-$0.358 \pm 0.002$ and FHRR $0.350 \pm 0.021$, in the range of standard baselines
-(we stress this is not a parameter-matched comparison). Second, despite this,
-\emph{both} variants fail at two-hop zero-shot composition: a one-sided binomial
-test cannot reject the hypothesis that their accuracy equals chance
-($p = 0.22$ and $p = 0.85$ respectively), and accuracy is flat across all cleanup
-temperatures. Third, we characterise the FHRR failure mechanism and find it is not
-the magnitude (``modulus collapse'') story sometimes assumed for phasor memories:
-the cleanup re-projects onto the unit torus, so $|z| = 1$ by construction. Two
-independent probes instead show the cleaned representation carries no phase
-information about the target---phasor cosine of $-0.009 \pm 0.006$ to the true
-entity versus $0.005 \pm 0.003$ to a random one, and a mean absolute phase error
-of $1.59$\,rad at the final hop, indistinguishable from the uniform value $\pi/2$.
-We resolve an apparent paradox---atomic ranking survives this near-random
-phase because it integrates aggregate codebook similarity, whereas the second
-bind is a per-component phase operation the cleanup does not support. An untrained
-control confirms training buys atomic competence but never composition. The
-limitation is architectural, and the cure must preserve phase coherence, not
-merely magnitude, across hops.
+Knowledge graph embedding (KGE) models predict single-hop links well but have
+no mechanism for \emph{zero-shot compositional} queries: multi-hop questions
+whose relation chains never appeared during training. Holographic Reduced
+Representations (HRR), which bind and unbind symbols via circular
+convolution, are a theoretically attractive candidate, since binding is
+approximately invertible and associative. We test whether this promise holds.
+
+We study two holographic memory variants, real-valued HRR and phase-only
+Fourier HRR (FHRR), each with a modern Hopfield cleanup, on FB15k-237 over
+five seeds. Four findings follow. First, both are competitive single-hop
+retrievers (filtered MRR $0.358 \pm 0.002$ for HRR, $0.350 \pm 0.021$ for
+FHRR). Second, neither composes zero-shot: accuracy stays at chance across
+all cleanup temperatures. Third, the main contribution, we localise the
+failure mechanistically. A hop-1 probe shows the memory recovers the correct
+intermediate entity with high fidelity (MRR $0.896 \pm 0.002$ for HRR), yet
+composition still fails even with a verified-correct intermediate. A second
+probe shows why: posing the \emph{ground-truth} second-hop fact as a
+standalone atomic query, bypassing composition entirely, already recovers it
+at only $0.26$ to $0.48\times$ average atomic accuracy, uniformly across
+relation fan-out. The bottleneck is not the bind-unbind algebra or the
+cleanup; it is that facts compositional chains pass through are intrinsically
+harder for the superposed memory to retrieve, a capacity and interference
+effect present already at a single hop. Fourth, we prove
+(Lemma~\ref{lem:softmax-noncommute}) that FHRR's softmax cleanup is not
+phase-equivariant, compounding the primary failure on the minority of chains
+where hop-1 itself errs. Fixing zero-shot composition requires improving
+retrieval capacity under superposition, not just redesigning the cleanup.
 \end{abstract}
 
-\noindent\textbf{Keywords:} Knowledge Graph Embeddings, Holographic Reduced
-Representations, Vector Symbolic Architectures, Compositional Reasoning, Modern
-Hopfield Networks, Zero-Shot Generalisation.
+\noindent\textbf{Keywords:} Knowledge graph embeddings $\cdot$ Holographic
+reduced representations $\cdot$ Vector symbolic architectures $\cdot$
+Compositional reasoning $\cdot$ Modern Hopfield networks $\cdot$ Zero-shot
+generalisation.
 
 % ============================================================
 \section{Introduction}
+\label{sec:intro}
 % ============================================================
 
-Knowledge graphs (KGs) store facts as triples $(h, r, t)$, e.g.\
-\emph{(Marie\_Curie, nationality, Poland)}. Knowledge graph embedding (KGE)
-methods learn vector representations of entities and relations so that plausible
-triples receive high scores~\cite{bordes2013transe, yang2014distmult,
-trouillon2016complex, sun2019rotate}. They are trained on, and evaluated against,
-\emph{single-hop} queries: ``given $h$ and $r$, predict $t$''.
-
-Many questions of interest are inherently \emph{compositional}: they chain
-several relations never jointly observed. ``Which administrative regions lie in
-the country a given person is a national of?'' requires composing
-\emph{nationality} with \emph{contains}. If that composite never appears in
-training, a standard KGE model has no mechanism to infer it. We call this setting
-\emph{zero-shot compositional reasoning}.
+Knowledge graphs (KGs) organise world knowledge as typed triples $(h, r, t)$,
+e.g.\ \emph{(Marie\_Curie, nationality, Poland)}, and KGE methods embed entities
+and relations into vector spaces so that plausible triples score high
+\cite{bordes2013transe,yang2014distmult,trouillon2016complex,sun2019rotate}.
+These methods work well for single-hop prediction. Many real queries are not
+single-hop, though. "Which administrative regions contain the birthplace of
+a given person's nationality?" requires chaining \textsc{nationality} with
+\textsc{contains}. If that exact chain never appeared in training, a standard
+KGE model cannot answer it: it has no mechanism to try. That is the
+\emph{zero-shot compositional reasoning} setting we study here.
 
 \paragraph{Why holographic memory?}
-Holographic Reduced Representations (HRR)~\cite{plate2003holographic} and the
-broader family of Vector Symbolic Architectures
-(VSA)~\cite{kanerva2009hyperdimensional, schlegel2022comparison} define an algebra
-over distributed vectors in which symbols are \emph{bound} together and later
-\emph{unbound}. The binding operator---circular convolution---is approximately
-invertible and associative, suggesting a memory storing facts as bound bundles
-could answer multi-hop queries by composing unbinding operations. Pairing this
-algebra with a modern Hopfield network~\cite{ramsauer2021hopfield} as an
-associative ``cleanup'' yields a natural candidate for zero-shot composition. Our
-central question is empirical: \emph{does this candidate work, and if not, why?}
+Holographic Reduced Representations
+(HRR)~\cite{plate2003holographic} and the broader family of Vector Symbolic
+Architectures (VSA)~\cite{kanerva2009hyperdimensional,schlegel2022comparison}
+define an algebra over fixed-width distributed vectors in which arbitrary symbol
+structures can be \emph{bound} into a single vector and later \emph{unbound}.
+The key operation, circular convolution, runs in $O(D \log D)$, is approximately
+invertible, and is associative~\cite{plate2003holographic}. A holographic memory
+that superposes facts as bound triples and answers queries by composing unbind
+operations is a natural zero-shot compositional reasoner, in principle. Modern
+Hopfield networks~\cite{ramsauer2021hopfield} give a fully differentiable
+associative cleanup step. The question is whether the pipeline actually
+composes in practice, and if not, which part breaks and why.
+
+\paragraph{Scope.}
+We do not claim to outperform supervised compositional methods such as
+Query2Box~\cite{ren2020query2box} or CQD~\cite{arakelyan2021complex}. Those
+methods receive explicit path-level supervision; we withhold it. The goal is to
+understand what holographic binding alone can do for zero-shot composition,
+without any relation-chain supervision. We study FB15k-237~\cite{toutanova2015observed}
+under a leakage-controlled two-hop protocol and verify all claims over five
+independent seeds.
 
 \paragraph{Contributions.}
-All claims below are verified over five random seeds on the full FB15k-237 test
-set under a leakage-controlled protocol.
+\begin{enumerate}[leftmargin=1.4em, itemsep=3pt]
+\item \textbf{Both variants are competitive atomic retrievers.}
+Real HRR reaches filtered MRR $0.358 \pm 0.002$ and FHRR $0.350 \pm 0.021$,
+in the range of TransE and DistMult on the same benchmark. A Hopfield ablation
+shows cleanup accounts for roughly half the performance
+(Section~\ref{sec:results-atomic}).
 
-\begin{enumerate}[leftmargin=1.4em, itemsep=2pt]
-    \item \textbf{Both holographic variants are competitive atomic retrievers}
-    (in the ranking sense). Real HRR reaches filtered MRR $0.358 \pm 0.002$ and
-    FHRR $0.350 \pm 0.021$, in the range of standard single-hop baselines
-    (Section~\ref{sec:results-atomic}). An ablation shows the Hopfield cleanup
-    accounts for about half of the achieved accuracy. These are not
-    parameter-matched comparisons.
+\item \textbf{Both variants fail at zero-shot two-hop composition.}
+Per-seed binomial tests against chance are non-significant in most seeds for
+both models; accuracy is flat across all tested cleanup temperatures. Training
+gives no compositional advantage over an untrained control
+(Section~\ref{sec:results-zeroshot}).
 
-    \item \textbf{Both variants fail at zero-shot composition.} A one-sided
-    binomial test against chance cannot be rejected for either model
-    ($p = 0.22$, $p = 0.85$), and zero-shot accuracy is flat across all cleanup
-    temperatures (Section~\ref{sec:results-zeroshot}). This is a negative result,
-    reported plainly.
+\item \textbf{We localise the failure to retrieval capacity, not the cleanup algebra.}
+A hop-1 probe shows the intermediate entity is recovered with high fidelity
+(mid-entity MRR $\approx 0.85$ to $0.90$), yet composition stays at chance even
+when the intermediate is verified correct. A second probe shows that standalone
+atomic accuracy on the \emph{ground-truth} second-hop fact is itself degraded
+to $0.26$ to $0.48\times$ the model's average atomic accuracy, independent of
+relation fan-out. The facts compositional chains rely on are simply harder to
+retrieve from the superposed memory, and this is true before composition or
+cleanup enters the picture (Section~\ref{sec:results-mechanism}).
 
-    \item \textbf{We characterise the FHRR failure mechanism.} The
-    magnitude-based ``modulus collapse'' intuition does not apply once the cleanup
-    re-projects onto the unit torus ($|z| = 1$). Two phase probes show the cleaned
-    representation carries no directional information about the target, and we
-    resolve the resulting paradox---atomic ranking survives near-random phase
-    because it integrates aggregate similarity, whereas the second bind needs
-    per-component phase coherence the cleanup does not supply
-    (Section~\ref{sec:results-mechanism}).
+\item \textbf{We prove a compounding secondary failure in FHRR.}
+Lemma~\ref{lem:softmax-noncommute} shows the softmax Hopfield cleanup does not
+commute with phase-additive binding. This compounds the primary failure on the
+subset of chains where hop-1 retrieval is imperfect
+(Section~\ref{sec:results-mechanism}).
 \end{enumerate}
 
 % ============================================================
@@ -155,90 +182,122 @@ set under a leakage-controlled protocol.
 % ============================================================
 
 \paragraph{Knowledge graph embeddings.}
-TransE~\cite{bordes2013transe} models a relation as a translation
-$h + r \approx t$. DistMult~\cite{yang2014distmult} uses a bilinear diagonal
-score; ComplEx~\cite{trouillon2016complex} extends it to complex embeddings for
-asymmetry; RotatE~\cite{sun2019rotate} represents relations as rotations,
-$t \approx h \circ r$. All are strong single-hop predictors with no native
-mechanism for composing unseen relation chains.
+TransE~\cite{bordes2013transe} models a relation as a translation in entity
+space, with score $\|h + r - t\|$. DistMult~\cite{yang2014distmult} uses a
+bilinear diagonal score; ComplEx~\cite{trouillon2016complex} extends it to
+complex embeddings to handle asymmetric relations; RotatE~\cite{sun2019rotate}
+treats relations as element-wise rotations in complex space. All four are strong
+single-hop predictors but offer no native mechanism for composing unseen
+relation chains at test time.
 
-\paragraph{Compositional and path-based reasoning.}
-The path-query framework of Guu et al.~\cite{guu2015traversing} composes relation
-embeddings along a path in vector space; NeuralLP~\cite{yang2017neurallp} and
-RNNLogic~\cite{qu2021rnnlogic} learn logical rules. These typically require
-supervision on paths or rules. We study the stricter zero-shot setting in which
-the composed relation is withheld entirely, and we do not claim to outperform
-trained compositional methods; we ask whether holographic binding \emph{alone}
-composes.
+\paragraph{Compositional and multi-hop reasoning.}
+Several lines of work address multi-hop reasoning with explicit supervision.
+Guu et al.~\cite{guu2015traversing} compose relation embeddings along observed
+paths; NeuralLP~\cite{yang2017neurallp} and RNNLogic~\cite{qu2021rnnlogic}
+learn soft logical rules. Query2Box~\cite{ren2020query2box} and
+BetaE~\cite{ren2020beta} embed existential first-order queries as geometric
+objects, training on path-structured supervision.
+CQD~\cite{arakelyan2021complex} decomposes complex queries into atomic link
+predictions at inference time. Our setting is strictly harder: zero-shot
+composition with no path-level supervision and no explicit intermediate-entity
+representations.
 
 \paragraph{Holographic and vector-symbolic memory.}
 HRR~\cite{plate2003holographic} introduced circular convolution as a binding
-operator over real vectors; hyperdimensional
-computing~\cite{kanerva2009hyperdimensional} and VSA
-surveys~\cite{schlegel2022comparison} study related algebras, including the
-Fourier HRR (FHRR) variant on unit-modulus phasors with element-wise complex
-multiplication. The VSA literature discusses noise accumulation under repeated
-binding in general terms; here we measure, for an FHRR-with-Hopfield-cleanup
-pipeline specifically, \emph{which} quantity (magnitude vs.\ phase) is lost.
+operator, building on tensor-product variable binding~\cite{smolensky1990tensor}.
+Hyperdimensional computing~\cite{kanerva2009hyperdimensional} and the
+comprehensive VSA survey~\cite{schlegel2022comparison} cover related algebras.
+The FHRR variant~\cite{plate2003holographic,schlegel2022comparison} encodes
+symbols as unit-modulus phasors, with binding as element-wise complex
+multiplication. Standard noise analysis shows recovery error growing as
+$O(\sqrt{K/D})$ in the number of superposed facts $K$
+\cite{plate2003holographic}. Our mechanistic probes
+(Section~\ref{sec:results-mechanism}) measure this capacity effect directly for
+the facts compositional reasoning depends on, rather than for the memory in
+aggregate. Resonator networks~\cite{frady2020resonator} propose an iterative
+cleanup that is phase-equivariant by construction and may partially address the
+secondary failure mode in Lemma~\ref{lem:softmax-noncommute}. Our results
+indicate the primary bottleneck sits upstream of cleanup, in retrieval capacity
+itself.
 
 \paragraph{Modern Hopfield networks.}
-Ramsauer et al.~\cite{ramsauer2021hopfield} showed the update rule of continuous
-modern Hopfield networks coincides with attention and retrieves stored patterns
-via a softmax over similarities. We use this as the cleanup that maps a noisy
-unbound estimate back to a codebook entry.
+Ramsauer et al.~\cite{ramsauer2021hopfield} showed that the update rule of
+continuous modern Hopfield networks coincides with scaled dot-product attention,
+with storage capacity exponential in $D$. We use this as a differentiable
+cleanup that maps a noisy unbound estimate back to the entity codebook. The
+capacity results concern single-pattern recovery from a nearby query. They do
+not directly bound retrieval accuracy for a fact buried in a superposition of
+$K = 272{,}115$ others at varying frequency, which is what our probes measure.
 
 % ============================================================
 \section{Problem Formulation}
 \label{sec:problem}
 % ============================================================
 
-Let $E$ be a set of entities and $R$ a set of relations; a knowledge graph is a
-triple set $T \subseteq E \times R \times E$, split into disjoint
-$T_{\text{tr}}, T_{\text{va}}, T_{\text{te}}$.
+Let $\mathcal{E}$ and $\mathcal{R}$ denote finite sets of entities and
+relations respectively; a knowledge graph is a set of triples
+$\mathcal{T} \subseteq \mathcal{E} \times \mathcal{R} \times \mathcal{E}$,
+partitioned into disjoint training, validation, and test sets
+$\mathcal{T}_{\mathrm{tr}}, \mathcal{T}_{\mathrm{va}}, \mathcal{T}_{\mathrm{te}}$.
 
 \paragraph{Single-hop (atomic) task.}
-Given $(h, r)$, predict $t$ with $(h, r, t) \in T_{\text{te}}$. We rank all
-candidate tails and report filtered metrics.
+Given a query pair $(h, r) \in \mathcal{E} \times \mathcal{R}$, predict $t$
+such that $(h, r, t) \in \mathcal{T}_{\mathrm{te}}$. Performance uses filtered
+Mean Reciprocal Rank (MRR) and Hits@$k$ under the standard filtered
+protocol~\cite{bordes2013transe}.
 
 \paragraph{Two-hop compositional task.}
-For a chain $(r_1, r_2)$, the compositional answer set for head $h$ is
+For a relation chain $(r_1, r_2) \in \mathcal{R}^2$, the \emph{compositional
+answer set} for head entity $h$ is
 \begin{equation}
-A_{h, r_1, r_2}
-= \{\, t \in E \;:\; \exists\, m \in E,\;
-(h, r_1, m) \in T \;\wedge\; (m, r_2, t) \in T \,\}.
+A_{h,r_1,r_2}
+  = \bigl\{\, t \in \mathcal{E} : \exists\, m \in \mathcal{E},\;
+    (h, r_1, m) \in \mathcal{T} \;\wedge\; (m, r_2, t) \in \mathcal{T} \,\bigr\}.
+\label{eq:composition-set}
 \end{equation}
-The model predicts an element of $A_{h, r_1, r_2}$ without having been trained on
-the composite $r_1 \circ r_2$ and without an explicit representation of the
+The model must predict an element of $A_{h,r_1,r_2}$ given only $(h, r_1, r_2)$,
+with no training on the composite $(r_1 \circ r_2)$ and no access to any
 intermediate entity $m$.
 
 \paragraph{Zero-shot protocol and leakage control.}
-We extract the ten most frequent two-hop chains in FB15k-237 (Algorithm~\ref{alg:split}).
-``Train support'' for a chain $(r_1, r_2)$ is the number of distinct mid-entities
-$m$ such that some $(h, r_1, m)$ and $(m, r_2, t)$ both occur in training; we
-require it to be $\geq 100$. The individual relations $r_1, r_2$ are themselves
-seen atomically in training; only their \emph{composition} is withheld. Chains
-with a repeated relation ($r_1 = r_2$) are permitted and handled identically,
-since the intermediate-entity constraint in $A_{h,r_1,r_2}$ is defined per hop and
-does not assume $r_1 \neq r_2$. To avoid trivial answers we remove every $(h, t)$ for which $t$ is directly reachable from
-$h$ via any single training relation. This removes $98$ pairs ($0.14\%$), leaving
-$69{,}855$ genuinely zero-shot pairs. Chance accuracy is
-$1/|E| \approx 6.8 \times 10^{-5}$.
+We extract the ten highest-frequency two-hop relation chains in FB15k-237 with
+chain training support $\geq 100$ (the number of distinct mid-entities $m$
+appearing in both atomic triples of the chain in $\mathcal{T}_{\mathrm{tr}}$).
+Individual relations $r_1, r_2$ appear in training; only their composition is
+withheld. To remove learnable shortcuts, we discard any test pair $(h, t)$
+where $t$ is directly reachable from $h$ via a single training relation,
+removing $98$ pairs ($0.14\%$) and leaving $69{,}855$ genuinely zero-shot
+pairs (Algorithm~\ref{alg:split}). Under a uniform single-answer ranking
+assumption, chance accuracy is $1/|\mathcal{E}| \approx 6.77 \times 10^{-5}$;
+this is our reference null throughout. Since several compositional answer sets
+admit more than one valid tail, the true chance rate for some queries exceeds
+$1/|\mathcal{E}|$, which makes the reported $p$-values conservative in the
+direction of rejecting $H_0$ less often. The selected chains span 19 distinct
+relation types and mid-entity fan-out from $2.4$ to $18.7$.
 
 \begin{algorithm}[t]
-\caption{Leakage-controlled zero-shot pair construction}
+\caption{Leakage-controlled zero-shot evaluation set construction}
 \label{alg:split}
 \begin{algorithmic}[1]
-\State \textbf{Input:} train graph $G_{\text{tr}}$, test graph $G_{\text{te}}$, number of chains $n$
-\State For each ordered $(r_1,r_2)$, count chain train support: distinct mid-entities linking $r_1$ then $r_2$ in $G_{\text{tr}}$
-\State In $G_{\text{te}}$, collect head--tail pairs reachable by each $(r_1,r_2)$
-\State Keep the $n$ chains with most test pairs subject to chain train support $\geq 100$
-\For{each kept chain $(r_1,r_2)$ and test pair $(h,t)$}
-    \If{$t$ is a direct train neighbour of $h$ under any relation}
-        \State discard $(h,t)$ \Comment{leakage}
-    \Else
-        \State add $(h, r_1, r_2, t)$ to the zero-shot set
-    \EndIf
+\Require Training graph $G_{\mathrm{tr}}$, test graph $G_{\mathrm{te}}$,
+         number of chains $n$, minimum support $s_{\min}$
+\For{each ordered pair $(r_1, r_2) \in \mathcal{R}^2$}
+  \State Compute chain support: 
+         $\text{sup}(r_1,r_2) \gets |\{m : \exists h,t, (h,r_1,m) \in G_{\mathrm{tr}}, 
+         (m,r_2,t) \in G_{\mathrm{tr}}\}|$
 \EndFor
+\State Select the $n$ chains with most test pairs subject to 
+       $\text{sup}(r_1,r_2) \geq s_{\min}$
+\State $\mathcal{S} \gets \emptyset$
+\For{each selected chain $(r_1,r_2)$ and test pair $(h,t)$ reachable by it}
+  \If{$t \in \mathcal{N}_{\mathrm{tr}}(h)$} 
+    \quad \Comment{$t$ is a direct training neighbour of $h$}
+    \State \textbf{discard} $(h, t)$
+  \Else
+    \State $\mathcal{S} \gets \mathcal{S} \cup \{(h, r_1, r_2, t)\}$
+  \EndIf
+\EndFor
+\Ensure $\mathcal{S}$ \Comment{$69{,}855$ zero-shot evaluation quadruples}
 \end{algorithmic}
 \end{algorithm}
 
@@ -247,56 +306,274 @@ $1/|E| \approx 6.8 \times 10^{-5}$.
 \label{sec:method}
 % ============================================================
 
-\subsection{Holographic algebra}
-For $a, b \in \Rb^D$, circular convolution binds them,
+\subsection{Holographic Binding Algebra}
+\label{sec:method-algebra}
+
+\paragraph{DFT convention.}
+We use the unitary discrete Fourier transform:
+$\hat{a}_k = D^{-1/2}\sum_{j=0}^{D-1} a_j\, e^{-2\pi i jk/D}$,
+so $\|\hat{\mathbf{a}}\|_2 = \|\mathbf{a}\|_2$.
+
+\paragraph{Real HRR.}
+For $\mathbf{a}, \mathbf{b} \in \Rb^D$, circular convolution is
+\begin{align}
+  (\mathbf{a} \bind \mathbf{b})_k 
+    &= \sum_{j=0}^{D-1} a_j\, b_{(k-j) \bmod D},
+  \label{eq:cconv}\\
+  \widehat{\mathbf{a} \bind \mathbf{b}} 
+    &= \hat{\mathbf{a}} \odot \hat{\mathbf{b}},
+  \label{eq:cconv-freq}
+\end{align}
+where $\odot$ is element-wise multiplication. Binding is commutative, and for
+embeddings drawn i.i.d.\ from $\mathcal{N}(0, D^{-1}\mathbf{I})$, the bound
+vector has approximately the same norm as the operands. Unbinding uses the
+approximate inverse:
 \begin{equation}
-(a \bind b)_k = \sum_{j=0}^{D-1} a_j\, b_{(k-j) \bmod D},
-\qquad
-\widehat{a \bind b} = \hat{a} \odot \hat{b},
+  \mathbf{a} \approx (\mathbf{a} \bind \mathbf{b}) \unbind \mathbf{b}
+    \;=\; \mathcal{F}^{-1}\!\bigl(
+      \widehat{\mathbf{a} \bind \mathbf{b}} \odot \overline{\hat{\mathbf{b}}}
+    \bigr).
+  \label{eq:unbind}
 \end{equation}
-with $\hat{\cdot}$ the DFT and $\odot$ element-wise product ($O(D \log D)$ via the
-FFT). Unbinding uses the conjugate,
-$a \approx (a \bind b) \unbind b = \mathcal{F}^{-1}( \widehat{a \bind b} \odot
-\overline{\hat{b}})$. Facts are superposed into one memory vector,
-$M = \sum_{(h, r, t) \in T_{\text{tr}}} e_h \bind \rho_r \bind e_t$, with entity
-embeddings $e_x$ and role embeddings $\rho_r$.
+Approximation error grows with the number of superposed facts $K$, at rate
+$O(\sqrt{K/D})$ for random embeddings. With $K = 272{,}115$ training triples
+in $D = 1024$ real dimensions, $K/D \approx 266$, a substantial noise floor.
+Section~\ref{sec:results-mechanism} measures its differential effect on the
+specific facts compositional chains depend on.
 
-\subsection{Hopfield cleanup}
-Unbinding from a superposed memory is noisy. A modern Hopfield cleanup maps the
-estimate back to the entity codebook $E \in \Rb^{|E| \times D}$,
+\paragraph{Complex FHRR.}
+FHRR encodes each symbol as a unit-modulus phasor $\mathbf{z} = e^{i\boldsymbol{\phi}}$
+with $\boldsymbol{\phi} \in [-\pi, \pi]^D$. Binding is element-wise complex
+multiplication (phase addition); unbinding multiplies by the conjugate:
 \begin{equation}
-\cleanupop(z) = \softmaxop\!\big(\beta\, \langle z, E \rangle\big)\, E,
-\label{eq:cleanup}
+  (\mathbf{z}_A \bind \mathbf{z}_B)_k = z_{A,k} \cdot z_{B,k} = e^{i(\phi_{A,k}+\phi_{B,k})},
+  \qquad
+  (\mathbf{z}_A \bind \mathbf{z}_B) \unbind \mathbf{z}_B = \mathbf{z}_A.
+  \label{eq:fhrr-bind}
 \end{equation}
-with inverse temperature $\beta$; a hard variant uses straight-through
-$\argmaxop$.
+Recovery is exact for a single stored fact and noisy for a superposition of $K$
+facts, where phase interference accumulates across components.
+Figure~\ref{fig:phasor-binding} visualises binding and unbinding on the unit circle.
 
-\subsection{Real HRR and Complex FHRR}
-\textbf{Real HRR} uses real embeddings $e_x, \rho_r \in \Rb^{D}$, $D{=}1024$.
-Atomic prediction is $\hat{t} = \cleanupop( M \unbind (e_h \bind \rho_r))$ scored
-against $E$; the two-hop prediction unbinds twice, cleaning the intermediate
-(hard) before the second bind. \textbf{Complex FHRR} represents each symbol by
-phases $\phi \in [-\pi, \pi]^{D}$, $D{=}512$, as a unit phasor $z = e^{i\phi}$.
-Binding is element-wise complex multiplication (phase addition); unbinding
-multiplies by the conjugate. Because FHRR embeddings are complex, $D{=}512$
-complex coordinates equal $1024$ real numbers---the same real parameter budget as
-Real HRR, so the two models are roughly parameter-matched to each other. Crucially,
-the FHRR cleanup extracts the phase of the convex combination and re-embeds it as
-$e^{i\phi}$, \emph{forcing $|z|=1$ at every cleanup output}---central to
-Section~\ref{sec:results-mechanism}. Figure~\ref{fig:architecture} shows both
-flows.
-
-\subsection{Training objective}
-Both models minimise a cross-entropy atomic loss plus a contrastive invertibility
-regulariser $\mathcal{L} = \mathcal{L}_{\text{atom}} + \lambda\,
-\mathcal{L}_{\text{inv}}$, $\lambda{=}0.2$, where $\mathcal{L}_{\text{inv}}$
-encourages $f \bind r$ to unbind back to $f$ and $r$. The memory $M$ is Hebbian
-initialised and refined by gradient descent. We use Adam (lr $10^{-3}$,
-cosine-annealed to $10^{-5}$), batch $2048$, gradient clip $1.0$.
-
-% ---------- FIGURE 1: ARCHITECTURE (TikZ) ----------
-\begin{figure*}[t]
+\begin{figure}[H]
 \centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+  scale=1.0,
+  circ/.style={circle, draw=black, thick, minimum size=3.2cm},
+  phasor/.style={->, thick, >=Stealth, #1},
+]
+\coordinate (origL) at (0,0);
+\draw[circ] (origL) circle (1.5cm);
+\draw[gray!40] (-1.5,0) -- (1.5,0);
+\draw[gray!40] (0,-1.5) -- (0,1.5);
+\draw[phasor=blue!70] (origL) -- (30:1.5);
+\node[blue!70, anchor=south] at (30:1.6) {$\ev{A}$};
+\draw[blue!50, dashed] (30:1.5) arc (30:0:0.5);
+\node[blue!50, right] at (0.6,0.2) {$\theta_A$};
+\draw[phasor=orange!70] (origL) -- (50:1.5);
+\node[orange!70, anchor=south west] at (50:1.6) {$\rv{R}$};
+\draw[orange!50, dashed] (50:1.5) arc (50:0:0.9);
+\node[orange!50, right] at (1.0,0.35) {$\theta_R$};
+\draw[phasor=green!60!black, line width=1.2pt] (origL) -- (80:1.5);
+\node[green!60!black, anchor=south] at (80:1.6) {$\ev{A} \bind \rv{R}$};
+\draw[green!60!black, dashed] (80:1.5) arc (80:0:1.3);
+\node[green!60!black, right] at (1.4,0.55) {$\theta_A{+}\theta_R$};
+\node[draw, fill=yellow!15, rounded corners, below=1.5cm of origL,
+      minimum width=5cm]
+      {$\displaystyle \text{Bind: } (e^{i\theta_A}) \odot (e^{i\theta_R}) = e^{i(\theta_A + \theta_R)}$};
+\begin{scope}[xshift=6cm]
+  \coordinate (origR) at (0,0);
+  \draw[circ] (origR) circle (1.5cm);
+  \draw[gray!40] (-1.5,0) -- (1.5,0);
+  \draw[gray!40] (0,-1.5) -- (0,1.5);
+  \draw[phasor=green!60!black, dashed] (origR) -- (80:1.5);
+  \node[green!60!black, anchor=south] at (80:1.6) {$\ev{A} \bind \rv{R}$};
+  \draw[phasor=orange!70, densely dotted] (origR) -- (-50:1.5);
+  \node[orange!70, anchor=north] at (-50:1.6) {$\overline{\rv{R}}$};
+  \draw[orange!50, dashed] (-50:1.5) arc (-50:0:0.9);
+  \node[orange!50, left] at (-1.0,0.35) {$-\theta_R$};
+  \draw[phasor=blue!70, line width=1.2pt] (origR) -- (30:1.5);
+  \node[blue!70, anchor=south] at (30:1.6) {$\approx \ev{A}$};
+\end{scope}
+\node[draw, fill=yellow!15, rounded corners, below=1.5cm of origR,
+      minimum width=5cm]
+      {$\displaystyle \text{Unbind: } (e^{i(\theta_A+\theta_R)}) \odot (e^{-i\theta_R}) = e^{i\theta_A}$};
+\draw[->, thick, gray] (2.5,-1.0) -- (3.5,-1.0) 
+      node[midway, above, font=\footnotesize] {unbind with $\overline{\rv{R}}$};
+\end{tikzpicture}%
+}
+\caption{Complex-phasor binding and unbinding in FHRR. \textbf{Left:} Binding
+adds phases. \textbf{Right:} Unbinding subtracts them via conjugate multiplication,
+recovering the original entity up to cross-talk noise from other superposed facts.}
+\label{fig:phasor-binding}
+\end{figure}
+
+\paragraph{Memory construction.}
+Both models superpose training triples into a single memory vector:
+\begin{equation}
+  \mem = \sum_{(h,r,t)\,\in\,\mathcal{T}_{\mathrm{tr}}} \ev{h} \bind \rv{r} \bind \ev{t},
+  \label{eq:memory}
+\end{equation}
+where $\ev{x} \in \Rb^D$ (HRR) or $\Cb^D$ (FHRR) are learned entity embeddings
+and $\rv{r}$ are learned relation embeddings. Entity and relation embeddings are
+trained jointly to maximise single-hop retrieval accuracy; $\mem$ is recomputed
+from the trained embeddings without further gradient updates.
+
+\subsection{Hopfield Cleanup}
+\label{sec:method-cleanup}
+
+Unbinding from a superposed memory produces a noisy estimate
+$\tilde{\mathbf{z}} \approx \ev{t}$, corrupted by interference from the other
+stored facts. A modern Hopfield network~\cite{ramsauer2021hopfield} maps this
+estimate back to the entity codebook $\mathbf{E} \in \Rb^{|\mathcal{E}| \times D}$:
+\begin{equation}
+  \cleanupop(\tilde{\mathbf{z}})
+    = \boldsymbol{\alpha}(\tilde{\mathbf{z}})^\top \mathbf{E},
+  \qquad
+  \alpha_i(\tilde{\mathbf{z}})
+    = \frac{\exp\!\bigl(\beta\,\ev{i}^\top \tilde{\mathbf{z}}\bigr)}
+           {\sum_{j} \exp\!\bigl(\beta\,\ev{j}^\top \tilde{\mathbf{z}}\bigr)},
+  \label{eq:cleanup}
+\end{equation}
+where $\beta > 0$ is an inverse temperature. A hard variant uses
+$\cleanupop_{\mathrm{hard}}(\tilde{\mathbf{z}}) = \ev{\argmaxop_i\,\ev{i}^\top\tilde{\mathbf{z}}}$.
+
+For FHRR, the output is re-projected onto the unit torus by extracting the
+element-wise phase:
+\begin{equation}
+  \cleanupop_{\mathrm{F}}(\tilde{\mathbf{z}})
+    = \exp\!\bigl(i\,\angle\bigl(\boldsymbol{\alpha}(\tilde{\mathbf{z}})^\top \mathbf{E}\bigr)\bigr).
+  \label{eq:cleanup-fhrr}
+\end{equation}
+This guarantees $|\cleanupop_{\mathrm{F}}(\tilde{\mathbf{z}})_k|=1$ by construction,
+ruling out magnitude collapse as a failure mode (Section~\ref{sec:results-mechanism}).
+
+\subsection{Atomic and Compositional Inference}
+\label{sec:method-inference}
+
+\paragraph{Atomic prediction.}
+The tail estimate for query $(h, r)$ is:
+\begin{equation}
+  \tilde{\mathbf{z}}_t = \mem \unbind (\ev{h} \bind \rv{r}),
+  \label{eq:atomic-query}
+\end{equation}
+followed by $\cleanupop(\tilde{\mathbf{z}}_t)$. Ranking uses cosine similarity
+to all entity embeddings.
+
+\paragraph{Two-hop compositional prediction.}
+For a chain $(r_1, r_2)$ with head $h$, we retrieve the intermediate entity:
+\begin{equation}
+  \hat{\mathbf{m}} = \cleanupop_{\mathrm{hard}}\!\bigl(\mem \unbind (\ev{h} \bind \rv{r_1})\bigr),
+  \label{eq:hop1}
+\end{equation}
+then use $\hat{\mathbf{m}}$ as the head for the second hop:
+\begin{equation}
+  \hat{\mathbf{t}} = \cleanupop\!\bigl(\mem \unbind (\hat{\mathbf{m}} \bind \rv{r_2})\bigr).
+  \label{eq:hop2}
+\end{equation}
+Both hops query the same memory $\mem$; no intermediate entity is ever observed.
+Section~\ref{sec:results-mechanism} shows that hop~1 succeeds at high accuracy,
+and that the bottleneck is in retrieving the second-hop fact from $\mem$,
+regardless of whether $\hat{\mathbf{m}}$ is correct.
+
+\subsection{Theoretical Analysis: Softmax Cleanup is Phase-Nonequivariant}
+\label{sec:theory}
+
+The mechanistic probes in Section~\ref{sec:results-mechanism} show that the
+\emph{primary} bottleneck, retrieval capacity under superposition, is
+measurable at a single hop, before any cleanup step acts. We additionally
+identify a \emph{secondary}, FHRR-specific failure that compounds this primary
+effect whenever hop-1 cleanup is imperfect: the softmax Hopfield cleanup
+followed by phase re-projection does not commute with binding.
+
+\begin{lemma}[Softmax cleanup is phase-nonequivariant]
+\label{lem:softmax-noncommute}
+Let $\mathbf{z} \in \Cb^D$ with $|z_k|=1$ for all $k$, and let
+$\boldsymbol{\rho} \in \Cb^D$ with $|\rho_k|=1$ be a unit-phasor relation
+embedding. Define the FHRR Hopfield cleanup $\cleanupop_{\mathrm{F}}$ as in
+Eq.~\eqref{eq:cleanup-fhrr}, with similarities computed as
+$\Real(\ev{i}^\top \bar{\mathbf{z}})$. Then in general,
+\begin{equation}
+  \cleanupop_{\mathrm{F}}(\mathbf{z} \odot \boldsymbol{\rho})
+  \;\neq\;
+  \cleanupop_{\mathrm{F}}(\mathbf{z}) \odot \boldsymbol{\rho}.
+  \label{eq:noncommute}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+It suffices to exhibit a single component $k$ for which
+Eq.~\eqref{eq:noncommute} fails. Consider $D=1$ with a two-entity
+codebook $\{e^{i\phi_1}, e^{i\phi_2}\} \subset \Cb$, query $z = e^{i\theta}$,
+and binding phasor $\rho = e^{i\psi}$.
+
+The softmax weights for query $z$ are
+$\alpha_j = \exp(\beta\cos(\phi_j - \theta)) / Z(\theta)$,
+where $Z(\theta) = \sum_\ell \exp(\beta\cos(\phi_\ell - \theta))$.
+The cleanup output is $c(z) = \exp(i\,\angle(\alpha_1 e^{i\phi_1} + \alpha_2 e^{i\phi_2}))$.
+
+\textit{Left-hand side} of Eq.~\eqref{eq:noncommute}: query is 
+$z \odot \rho = e^{i(\theta+\psi)}$, so weights become
+$\tilde\alpha_j = \exp(\beta\cos(\phi_j - \theta - \psi)) / Z(\theta+\psi)$,
+giving
+\[
+  \mathrm{LHS} = \exp\!\bigl(i\,\angle\bigl(\tilde\alpha_1 e^{i\phi_1} + \tilde\alpha_2 e^{i\phi_2}\bigr)\bigr).
+\]
+
+\textit{Right-hand side}: multiply cleanup output by $\rho$:
+\[
+  \mathrm{RHS} = \exp\!\bigl(i\bigl[\angle(\alpha_1 e^{i\phi_1} + \alpha_2 e^{i\phi_2}) + \psi\bigr]\bigr).
+\]
+
+For LHS $=$ RHS one would need
+$\angle(\tilde\alpha_1 e^{i\phi_1} + \tilde\alpha_2 e^{i\phi_2})
+= \angle(\alpha_1 e^{i\phi_1} + \alpha_2 e^{i\phi_2}) + \psi$.
+But $\tilde\alpha_j \neq \alpha_j$ whenever $\psi \neq 0$ and the two entities
+are not symmetrically placed around $\theta$, so the weighted sum of phasors
+is not simply phase-shifted by $\psi$.
+
+\textit{Concrete counterexample.}
+Set $\phi_1 = 0$, $\phi_2 = 2\pi/3$, $\theta = 0.1$, $\psi = \pi/3$,
+$\beta = 5$.
+Then $\alpha_1 \approx 0.9991$, $\alpha_2 \approx 0.0009$,
+so $c(z) \approx e^{i \cdot 0.0008}$ and
+$\mathrm{RHS} \approx e^{i \cdot 1.048}$.
+For LHS, the query shifts to $\theta + \psi \approx 1.147$, now closer to
+$\phi_2 \approx 2.094$ than to $\phi_1 = 0$:
+$\tilde\alpha_1 \approx 0.296$, $\tilde\alpha_2 \approx 0.704$,
+so $\mathrm{LHS} \approx e^{i \cdot 1.663}$.
+We have $\mathrm{LHS} \approx e^{i \cdot 1.663} \neq e^{i \cdot 1.048} = \mathrm{RHS}$,
+a phase gap of $\approx 0.6$ rad. For $D > 1$, errors compound
+independently per component across the second binding in Eq.~\eqref{eq:hop2}.
+\end{proof}
+
+\begin{remark}
+\label{rem:hardcleanup}
+A hard nearest-neighbour cleanup is equivariant if and only if the phase shift
+$\psi$ maps each codebook Voronoi cell to another valid cell, which holds when
+the codebook comes from a uniform phase lattice. Resonator
+networks~\cite{frady2020resonator} provide an alternative that maintains phase
+equivariance through iterative refinement. The primary bottleneck, however, lies
+upstream of cleanup non-commutativity entirely. A phase-equivariant cleanup
+addresses the secondary failure mode identified here but would not by itself
+resolve the capacity-limited retrieval problem.
+\end{remark}
+
+\subsection{Training Objective}
+\label{sec:method-training}
+
+Both models minimise a cross-entropy loss over the atomic retrieval task plus a
+contrastive invertibility regulariser:
+$\mathcal{L} = \mathcal{L}_{\text{atom}} + \lambda \mathcal{L}_{\text{inv}}$,
+$\lambda = 0.2$. $\mathcal{L}_{\text{inv}}$ encourages $f \bind r$ to unbind
+back to both $f$ and $r$. The memory $\mem$ is Hebbian-initialised and refined
+by gradient descent. We use Adam (lr $10^{-3}$, cosine-annealed to $10^{-5}$),
+batch size $2048$, gradient clip $1.0$.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
     font=\small,
     box/.style={rectangle, rounded corners=2pt, draw=black, thick,
@@ -305,217 +582,204 @@ cosine-annealed to $10^{-5}$), batch $2048$, gradient clip $1.0$.
     op/.style={circle, draw=black, thick, minimum size=0.65cm, fill=orange!25},
     mem/.style={box, fill=green!12, minimum width=1.1cm},
     clean/.style={box, fill=purple!12, minimum width=1.5cm},
-    out/.style={box, fill=red!10},
+    outbox/.style={box, fill=red!10},
     arr/.style={-{Stealth[length=2mm]}, thick},
     lbl/.style={font=\scriptsize\itshape, text=black!70}
 ]
 \node[lbl] at (-1.4, 2.5) {\textbf{(a) Atomic}};
-\node[emb]   (h)  at (0, 1.55) {$e_h$};
-\node[emb]   (r)  at (0, 0.45) {$\rho_r$};
+\node[emb]   (h)  at (0, 1.55) {$\ev{h}$};
+\node[emb]   (r)  at (0, 0.45) {$\rv{r}$};
 \node[op]    (b1) at (1.5, 1.0) {$\bind$};
-\node[mem]   (M1) at (3.1, 1.85){$M$};
+\node[mem]   (M1) at (3.1, 1.85){$\mem$};
 \node[op]    (u1) at (3.1, 1.0) {$\unbind$};
 \node[clean] (c1) at (4.9, 1.0) {cleanup};
-\node[out]   (o1) at (6.7, 1.0) {$\hat t$};
+\node[outbox] (o1) at (6.7, 1.0) {$\hat t$};
 \draw[arr] (h) -- (b1); \draw[arr] (r) -- (b1);
 \draw[arr] (b1) -- (u1); \draw[arr] (M1) -- (u1);
 \draw[arr] (u1) -- (c1) node[midway,above,lbl]{noisy};
 \draw[arr] (c1) -- (o1);
 \node[lbl] at (-1.25, -1.05) {\textbf{(b) Two-hop}};
-\node[emb]   (h2) at (0, -1.85)   {$e_h$};
-\node[emb]   (ra) at (0, -2.95)   {$\rho_{r_1}$};
+\node[emb]   (h2) at (0, -1.85)   {$\ev{h}$};
+\node[emb]   (ra) at (0, -2.95)   {$\rv{r_1}$};
 \node[op]    (bb1)at (1.4, -2.4)  {$\bind$};
 \node[op]    (uu1)at (2.9, -2.4)  {$\unbind$};
-\node[mem]   (M2) at (2.9, -1.55) {$M$};
+\node[mem]   (M2) at (2.9, -1.55) {$\mem$};
 \node[clean] (cc1)at (4.5, -2.4)  {cleanup\\(hard)};
-\node[emb]   (rb) at (4.5, -3.65) {$\rho_{r_2}$};
+\node[emb]   (rb) at (4.5, -3.65) {$\rv{r_2}$};
 \node[op]    (bb2)at (6.0, -2.85) {$\bind$};
 \node[op]    (uu2)at (7.4, -2.85) {$\unbind$};
-\node[mem]   (M3) at (7.4, -1.95) {$M$};
+\node[mem]   (M3) at (7.4, -1.95) {$\mem$};
 \node[clean] (cc2)at (9.0, -2.85) {cleanup};
-\node[out]   (o2) at (10.7, -2.85){$\hat t$};
+\node[outbox] (o2) at (10.7, -2.85){$\hat t$};
 \draw[arr] (h2) -- (bb1); \draw[arr] (ra) -- (bb1);
 \draw[arr] (bb1) -- (uu1); \draw[arr] (M2) -- (uu1);
 \draw[arr] (uu1) -- (cc1);
-\draw[arr] (cc1) -- (bb2) node[midway,above,lbl]{$\hat m$};
+\draw[arr] (cc1) -- (bb2) node[pos=0.55,above,yshift=8pt,lbl]{$\hat m$};
 \draw[arr] (rb) -- (bb2);
 \draw[arr] (bb2) -- (uu2); \draw[arr] (M3) -- (uu2);
 \draw[arr] (uu2) -- (cc2); \draw[arr] (cc2) -- (o2);
-\node[draw=red, thick, dashed, rounded corners, fit=(cc2)(o2),
+\node[draw=red, thick, dashed, rounded corners, fit=(uu2)(cc2)(o2),
       inner sep=4pt] {};
-\node[red, font=\scriptsize\bfseries] at (9.85, -3.75) {phase decorrelated};
-\end{tikzpicture}
-\caption{Holographic memory architecture. \textbf{(a)}~An atomic query binds head
-$e_h$ with role $\rho_r$, unbinds from the superposed memory $M$, and projects to
-an entity via the Hopfield cleanup. \textbf{(b)}~A two-hop query repeats
-bind--unbind--cleanup: the first (hard) cleanup yields an estimated intermediate
-$\hat m$, which is bound with the second role and unbound again. The dashed red
-box marks the failure point---after the second hop the cleaned representation's
-phase is decorrelated from the true target (Section~\ref{sec:results-mechanism}).}
+\node[red, font=\scriptsize\bfseries] at (9.3, -3.75) {capacity-limited retrieval};
+\end{tikzpicture}%
+}
+\caption{Holographic memory architecture. \textbf{(a)} An atomic query binds the
+head with the relation, unbinds from the superposed memory, and projects via the
+Hopfield cleanup. \textbf{(b)} A two-hop query repeats bind-unbind-cleanup.
+Hop~1 (left cleanup) succeeds with high fidelity; the dashed red box marks
+where failure actually occurs: in retrieving the second-hop fact from the
+superposed memory, not in the correctness of $\hat m$ or the bind-unbind
+algebra.}
 \label{fig:architecture}
-\end{figure*}
+\end{figure}
 
 % ============================================================
 \section{Experimental Setup}
-\label{sec:setup}
+\label{sec:experiments}
 % ============================================================
-\paragraph{Dataset.}
-Canonical FB15k-237: $272{,}115$ train, $17{,}535$ valid, $20{,}466$ test
-triples; $|E| = 14{,}778$ entities (entities and relations share one index space)
-and $237$ relations.
 
-\paragraph{Metrics.}
-\emph{Top-1 accuracy} is the fraction of test queries whose top-scored candidate
-is the gold tail. We also report filtered \emph{MRR} and \emph{Hits@}$\{1,3,10\}$,
-removing all other true tails before scoring the gold tail. Crucially, all
-ranking metrics are computed on the \emph{full} test set ($20{,}466$ queries), not
-a sample. For composition we report top-1 zero-shot accuracy over the pairs of
-Algorithm~\ref{alg:split} and a one-sided binomial test against chance.
+\subsection{Dataset and Preprocessing}
+We use FB15k-237~\cite{toutanova2015observed}: $14{,}541$ entities, $237$
+relations, $272{,}115$/$17{,}535$/$20{,}466$ train/valid/test triples. The
+zero-shot evaluation set follows Algorithm~\ref{alg:split}. The 10 selected
+chains span 19 distinct relation types with mid-entity fan-out from $2.4$ to
+$18.7$. Compositional failure is consistent across all chains.
 
-\paragraph{Reproducibility.}
-All headline numbers are mean $\pm$ std over seeds $\{1,2,3,4,42\}$. Real HRR uses
-$D{=}1024$, $\beta{=}8$; FHRR $D{=}512$ complex ($=1024$ real), $\beta{=}12$.
+\subsection{Implementation Details}
+Both models use $D=1024$ real parameters (HRR: $D=1024$ real; FHRR: $D=512$
+complex, i.e.\ $1024$ reals). Embeddings are initialised from
+$\mathcal{N}(0, D^{-1}\mathbf{I})$. We use Adam ($\eta=10^{-3}$, cosine-annealed
+to $10^{-5}$), batch size $2048$, gradient clipping $1.0$, $200$ epochs.
+All experiments run over five random seeds $\{1,2,3,4,42\}$; we report
+mean $\pm$ standard deviation. Default inverse temperatures: $\beta=8$ (HRR),
+$\beta=12$ (FHRR).
+
+\subsection{Phase Probe Definitions}
+\label{sec:probes}
+For complex vectors $\mathbf{u}, \mathbf{v} \in \Cb^D$ with $|u_k|=|v_k|=1$:
+\begin{align}
+  S_\phi(\mathbf{u}, \mathbf{v})
+    &= \frac{1}{D}\Real\!\bigl(\mathbf{u}^\top \bar{\mathbf{v}}\bigr)
+     = \frac{1}{D}\sum_{k=1}^D \cos(\angle u_k - \angle v_k),
+  \label{eq:phasor-cos}\\
+  \Delta\phi(\mathbf{u}, \mathbf{v})
+    &= \frac{1}{D}\sum_{k=1}^D |\angle u_k - \angle v_k|_\pi,
+  \label{eq:phase-err}
+\end{align}
+where $|\cdot|_\pi$ denotes the wrapped distance on $[-\pi,\pi]$.
+For independent uniform random phasors,
+$\mathbb{E}[S_\phi]=0$ and $\mathbb{E}[\Delta\phi]=\pi/2 \approx 1.571$\,rad.
+
+\subsection{Mechanistic Probes}
+\label{sec:probes-mechanism}
+
+To localise the compositional failure, we introduce two further probes,
+both computed by inference over stored checkpoints with no additional training.
+
+\paragraph{Hop-1 mid-entity retrieval probe.}
+For each unique $(h, r_1)$ pair in the zero-shot evaluation set, we treat
+intermediate-entity prediction as a standard filtered atomic query: gold labels
+are all $m$ with $(h, r_1, m)$ in the full graph (train $\cup$ valid $\cup$
+test), and we report filtered MRR and Hits@$k$ using the standard protocol,
+applied to $\mem \unbind (\ev{h} \bind \rv{r_1})$ before any second-hop
+computation.
+
+\paragraph{Composition conditional on mid correctness.}
+For each zero-shot quadruple $(h, r_1, r_2, t)$, we compute a deterministic
+intermediate prediction $\hat m = \argmaxop_i\,
+\ev{i}^\top\bigl(\mem \unbind (\ev{h}\bind\rv{r_1})\bigr)$, re-embed
+$\hat m$ as a clean codebook vector, and complete the second hop. We then
+partition quadruples by whether $\hat m$ is a valid $r_1$-neighbour of $h$
+and report composition accuracy on each partition separately.
+
+\paragraph{Ground-truth hop-2 atomic-difficulty probe.}
+For each zero-shot quadruple with at least one true chain-consistent intermediate
+$m^\star$, meaning $(h,r_1,m^\star)$ and $(m^\star, r_2, t)$ both hold, we pose
+$(m^\star, r_2)$ as a standalone atomic query using the model's own learned
+embedding for $m^\star$, bypassing hop 1 entirely, and measure filtered top-1
+accuracy. Comparing this to accuracy on a uniformly sampled atomic test query
+isolates whether chain-relevant facts are intrinsically harder to retrieve from
+$\mem$, independent of any error introduced by hop 1 or the composition
+pipeline. We additionally stratify by relation fan-out (median split) to rule
+out fan-out as the explanation.
 
 % ============================================================
 \section{Results}
 \label{sec:results}
 % ============================================================
 
-\subsection{Both variants are competitive atomic retrievers}
+\subsection{Atomic Retrieval}
 \label{sec:results-atomic}
 
-Table~\ref{tab:atomic} reports full-test-set single-hop performance over five
-seeds, visualised in Figure~\ref{fig:atomicbar}. Real HRR reaches filtered MRR
+Table~\ref{tab:atomic} reports filtered single-hop performance over five seeds
+on the full test set ($20{,}466$ queries). Real HRR reaches MRR
 $0.358 \pm 0.002$ and FHRR $0.350 \pm 0.021$, both in the range of standard
-baselines, with Hits@10 around $0.53$. We emphasise the baseline figures are
-representative literature values at their own dimensionalities and evaluation
-conventions; they are \emph{not} a parameter-matched re-implementation, and our
-models additionally carry a Hebbian memory $M$. Table~\ref{tab:atomic} should be
-read as evidence that holographic retrieval \emph{can be competitive}, not as a
-controlled ranking, and we do not claim to beat any baseline. Notably FHRR---whose
-top-1 accuracy ($0.126$) is below real HRR's ($0.158$)---attains a comparable
-\emph{MRR} at the same real-parameter budget, indicating its errors are
-near-misses in the ranking rather than gross failures.
+baselines. The larger standard deviation for FHRR ($\pm 0.021$) likely reflects
+greater sensitivity of complex-valued optimisation to random seeds; it does not
+affect the qualitative picture. The Hopfield cleanup accounts for roughly half
+of atomic performance (Table~\ref{tab:ablation}): removing it drops real-HRR
+top-1 from $0.158$ to $0.081$.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Atomic (single-hop) link prediction on FB15k-237, filtered setting,
-\emph{full test set} ($20{,}466$ queries). Our values are mean~$\pm$~std over five
-seeds. Baseline values are representative literature figures at their own
-dimensionalities, for context only---not a parameter-matched comparison
-(Section~\ref{sec:discussion}). Top-1 is reported for our models as a diagnostic
-that motivates the margin analysis in Section~\ref{sec:results-mechanism}; it is
-typically not reported for the baselines and is left blank there.}
+full test set. Our values are mean $\pm$ std over five seeds. Baseline values
+are representative literature figures at their own dimensionalities.}
 \label{tab:atomic}
 \begin{tabular}{lccccc}
 \toprule
 Model & Top-1 & MRR & Hits@1 & Hits@3 & Hits@10 \\
 \midrule
-TransE \cite{bordes2013transe}$^\dagger$  & -- & 0.294 & -- & -- & 0.465 \\
-DistMult \cite{yang2014distmult}$^\dagger$ & -- & 0.241 & -- & -- & 0.419 \\
-ComplEx \cite{trouillon2016complex}$^\dagger$ & -- & 0.247 & -- & -- & 0.428 \\
-RotatE \cite{sun2019rotate}$^\dagger$ & -- & 0.338 & 0.241 & 0.375 & 0.533 \\
+TransE$^\dagger$    & --   & 0.294 & --     & --     & 0.465 \\
+DistMult$^\dagger$  & --   & 0.241 & --     & --     & 0.419 \\
+ComplEx$^\dagger$   & --   & 0.247 & --     & --     & 0.428 \\
+RotatE$^\dagger$    & --   & 0.338 & 0.241  & 0.375  & 0.533 \\
 \midrule
-Real HRR (ours)  & $0.158 \pm 0.001$ & $0.358 \pm 0.002$
- & $0.267 \pm 0.002$ & $0.392 \pm 0.003$ & $0.540 \pm 0.003$ \\
-Complex FHRR (ours) & $0.126 \pm 0.001$ & $0.350 \pm 0.021$
- & $0.262 \pm 0.017$ & $0.390 \pm 0.024$ & $0.524 \pm 0.028$ \\
+Real HRR (ours)     & $0.158_{\pm 0.001}$ & $0.358_{\pm 0.002}$
+ & $0.267_{\pm 0.002}$ & $0.392_{\pm 0.003}$ & $0.540_{\pm 0.003}$ \\
+FHRR (ours)         & $0.126_{\pm 0.001}$ & $0.350_{\pm 0.021}$
+ & $0.262_{\pm 0.017}$ & $0.390_{\pm 0.024}$ & $0.524_{\pm 0.028}$ \\
 \bottomrule
 \end{tabular}
-
 \vspace{2pt}
-{\footnotesize $^\dagger$ Representative literature values; not re-run here.}
+{\footnotesize $^\dagger$ Literature values from \cite{bordes2013transe,
+yang2014distmult,trouillon2016complex,sun2019rotate}; not re-run here.}
 \end{table}
 
-% ---------- FIGURE 2: atomic bar chart ----------
-\begin{figure}[t]
+\begin{table}[H]
 \centering
-\begin{tikzpicture}
-\begin{axis}[
-    width=\columnwidth, height=5.2cm,
-    ybar, bar width=7pt,
-    ymin=0, ymax=0.62,
-    ylabel={Score (filtered)},
-    symbolic x coords={MRR, Hits@1, Hits@3, Hits@10},
-    xtick=data,
-    legend style={at={(0.5,1.18)}, anchor=north, legend columns=3, draw=none, font=\small},
-    enlarge x limits=0.18,
-    error bars/y dir=both, error bars/y explicit,
-    grid=both, grid style={gray!20},
-]
-% RotatE (baseline)
-\addplot[fill=gray!40] coordinates {(MRR,0.338) (Hits@1,0.241) (Hits@3,0.375) (Hits@10,0.533)};
-% Real HRR
-\addplot[fill=blue!55] coordinates {
-  (MRR,0.358)  +- (0,0.002)
-  (Hits@1,0.267) +- (0,0.002)
-  (Hits@3,0.392) +- (0,0.003)
-  (Hits@10,0.540) +- (0,0.003)};
-% FHRR
-\addplot[fill=orange!70] coordinates {
-  (MRR,0.350)  +- (0,0.021)
-  (Hits@1,0.262) +- (0,0.017)
-  (Hits@3,0.390) +- (0,0.024)
-  (Hits@10,0.524) +- (0,0.028)};
-\legend{RotatE (lit.), Real HRR, Complex FHRR}
-\end{axis}
-\end{tikzpicture}
-\caption{Atomic link-prediction metrics on the full FB15k-237 test set. Both
-holographic models are in the range of the RotatE reference (grey, literature
-value, not parameter-matched). Error bars are $\pm$ std over five seeds; the
-RotatE bar is a single literature point estimate and has no error bar available.}
-\label{fig:atomicbar}
-\end{figure}
-
-\paragraph{The Hopfield cleanup carries half the performance.}
-Replacing the cleanup of Eq.~\eqref{eq:cleanup} with a direct normalisation of the
-unbound estimate (\emph{no Hopfield}) drops real-HRR atomic accuracy from $0.158$
-to $0.081$---a relative decrease of $\approx 48\%$ (Table~\ref{tab:ablation-core}).
-The cleanup is essential, not cosmetic. We do not ablate the FHRR cleanup
-separately because its phase re-projection is architecturally mandatory: without
-it the representation leaves the unit torus and binding is no longer well defined.
-
-\begin{table}[t]
-\centering
-\caption{Core-component ablation (Real HRR, five seeds, full test set). Removing
-the Hopfield cleanup nearly halves atomic accuracy; zero-shot accuracy is at
-chance in both cases.}
-\label{tab:ablation-core}
+\caption{Core-component ablation (Real HRR, five seeds, full test set).}
+\label{tab:ablation}
 \begin{tabular}{lcc}
 \toprule
-Configuration & Atomic Top-1 & Zero-Shot \\
+Configuration & Atomic Top-1 & Zero-Shot Accuracy \\
 \midrule
-Full model            & $0.158 \pm 0.001$ & $0.00017 \pm 0.00009$ \\
-$-$ Hopfield cleanup  & $0.081 \pm 0.010$ & $0.00030 \pm 0.00010$ \\
+Full model            & $0.158 \pm 0.001$ & $1.7 \times 10^{-4}_{\pm 0.9 \times 10^{-4}}$ \\
+$-$ Hopfield cleanup  & $0.081 \pm 0.010$ & $3.0 \times 10^{-4}_{\pm 1.0 \times 10^{-4}}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Both variants fail at zero-shot composition}
+\subsection{Zero-Shot Compositional Reasoning}
 \label{sec:results-zeroshot}
 
-In sharp contrast to atomic performance, two-hop zero-shot accuracy is at or near
-chance for \emph{both} variants. Mean accuracy is $1.7\times 10^{-4}$ (real HRR)
-and $2.9\times 10^{-5}$ (FHRR), against chance $6.8\times 10^{-5}$. We run a
-one-sided binomial test per seed ($H_0$: accuracy $=$ chance). For FHRR the null
-is not rejected at $\alpha = 0.05$ for any of the five seeds (per-seed $p$ in
-$[0.34, 1.0]$): there is no evidence FHRR exceeds chance. For real HRR the picture
-is marginal---the null is rejected for three of five seeds (per-seed $p$ in
-$[0.0000, 0.99]$)---but the absolute accuracy remains tiny ($\sim\!1.7\times
-10^{-4}$, i.e.\ a handful of the $69{,}855$ pairs), so even where it is
-statistically above chance it is far from any usable signal and orders of
-magnitude below atomic performance. We therefore describe both models as failing
-the compositional task. The failure is not a temperature artifact---sweeping
-$\beta \in \{1,5,10,20,50\}$ leaves accuracy flat and near chance
-(Figure~\ref{fig:beta}). No temperature elicits composition, indicating a
-structural obstacle.
+Two-hop zero-shot accuracy is at or near chance for both variants: mean
+accuracy is $1.7 \times 10^{-4}$ (real HRR) and $2.9 \times 10^{-5}$ (FHRR),
+against chance $6.77 \times 10^{-5}$. We run a one-sided binomial test per
+seed ($H_0$: accuracy $=$ chance). For FHRR, the null is not rejected at
+$\alpha = 0.05$ in any seed (per-seed $p \in [0.34, 1.0]$). For real HRR,
+the null is rejected in three of five seeds, but the absolute accuracy
+($\sim 1.7 \times 10^{-4}$, a handful of the $69{,}855$ pairs) is orders of
+magnitude below single-hop top-1, so the model is functionally at chance even
+where the test formally rejects. Sweeping $\beta \in \{1,5,10,20,50\}$ leaves
+accuracy flat near chance (Figure~\ref{fig:beta}): no temperature elicits
+composition.
 
-% ---------- FIGURE 3: beta sweep ----------
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    width=\columnwidth, height=4.8cm,
+    width=0.85\textwidth, height=4.8cm,
     xlabel={Cleanup temperature $\beta$},
     ylabel={Zero-shot accuracy},
     xmode=log, log basis x=10,
@@ -527,53 +791,164 @@ structural obstacle.
 ]
 \addplot[blue, thick, mark=*] coordinates {(1,0.0005)(5,0.0005)(10,0.0005)(20,0.0003)(50,0.0002)};
 \addplot[red, dashed, thick] coordinates {(1,0.000068)(50,0.000068)};
-\legend{Real HRR zero-shot, chance ($1/|E|$)}
+\legend{Real HRR zero-shot, chance ($1/|\mathcal{E}|$)}
 \end{axis}
 \end{tikzpicture}
 \caption{Cleanup temperature sweep (Real HRR, representative seed). Zero-shot
-accuracy stays near the chance line (red) for all $\beta$; no temperature elicits
-composition.}
+accuracy stays near chance across all $\beta$; no temperature elicits composition.}
 \label{fig:beta}
 \end{figure}
 
-\subsection{The FHRR failure mechanism: phase, not magnitude}
+\subsection{Hop-1 Retrieval Succeeds: Localising the Failure to Hop 2}
+\label{sec:results-hop1}
+
+The most obvious explanation for compositional failure is that the model never
+recovers a usable intermediate entity at hop 1, and that two-hop failure is
+just hop-1 failure propagated forward. The hop-1 mid-entity retrieval probe
+rules this out directly.
+
+\begin{table}[H]
+\centering
+\caption{Hop-1 intermediate-entity retrieval, evaluated as a standard filtered
+atomic query over the $2{,}020$ unique $(h,r_1)$ pairs in the zero-shot set.
+Mean $\pm$ std over five seeds.}
+\label{tab:hop1}
+\begin{tabular}{lcccc}
+\toprule
+Model & MRR & Hits@1 & Hits@10 & Median rank \\
+\midrule
+Real HRR & $0.896_{\pm 0.002}$ & $0.845_{\pm 0.003}$ & $0.976_{\pm 0.005}$ & $1.0$ \\
+FHRR     & $0.849_{\pm 0.034}$ & $0.777_{\pm 0.049}$ & $0.961_{\pm 0.010}$ & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hop-1 retrieval is excellent: median rank $1$, Hits@1 above $0.84$ for real
+HRR and $0.78$ for FHRR, substantially better than the models' own atomic
+test accuracy (Table~\ref{tab:atomic}, Hits@1 $\approx 0.27$/$0.26$). The
+gap is expected: $(h, r_1)$ pairs in high-frequency chains tend to be
+well-represented training facts, not a uniform draw from the test distribution.
+Whatever causes two-hop failure, it is not an inability to identify the
+intermediate entity.
+
+We next ask whether composition succeeds \emph{conditional} on a correct
+intermediate. Table~\ref{tab:conditional} shows it does not.
+
+\begin{table}[H]
+\centering
+\caption{Composition accuracy conditioned on whether the deterministic
+intermediate prediction $\hat m$ is a valid $r_1$-neighbour of $h$. Mean
+$\pm$ std over five seeds; $n$ is the mean partition size out of $69{,}855$
+quadruples. Chance is $6.77\times10^{-5}$.}
+\label{tab:conditional}
+\begin{tabular}{lccc}
+\toprule
+Model & Acc.\ $\mid \hat m$ valid & Acc.\ $\mid \hat m$ invalid & Frac.\ $\hat m$ valid \\
+\midrule
+Real HRR & $2.89_{\pm 1.28}\times10^{-4}$ ($n{\approx}15{,}946$) & $1.25_{\pm 0.99}\times10^{-4}$ ($n{\approx}53{,}909$) & $0.228_{\pm 0.051}$ \\
+FHRR     & $7.05_{\pm 3.60}\times10^{-4}$ ($n{\approx}13{,}590$) & $0.60_{\pm 0.48}\times10^{-4}$ ($n{\approx}56{,}264$) & $0.195_{\pm 0.087}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Composition accuracy given a valid intermediate is higher than given an invalid
+one for both models. But both conditional accuracies remain within one order of
+magnitude of chance, two to four orders of magnitude below atomic Hits@1.
+At the per-seed level, real HRR produces as few as $1$ correct prediction out
+of $15{,}815$ quadruples with a verified-correct intermediate (seed 4); FHRR
+produces as few as $3$ out of $10{,}603$ (seed 42). A correct intermediate entity
+is necessary but nowhere near sufficient for correct composition. The bottleneck
+sits downstream of hop-1 retrieval, in the second bind-unbind-cleanup step itself.
+
+\subsection{Hop-2 Atomic-Difficulty Probe: The Bottleneck Is Retrieval Capacity}
 \label{sec:results-mechanism}
 
-A common intuition for phasor memories under iterated binding is \emph{modulus
-collapse}: the softmax cleanup of Eq.~\eqref{eq:cleanup} is a convex combination
-of unit phasors, so its output should have $|z| \ll 1$, decaying toward a noise
-floor over hops. We tested this directly and found it inapplicable here.
+Section~\ref{sec:results-hop1} shows hop-1 succeeds and composition still fails
+even with a verified-correct intermediate. Two explanations remain. One:
+something specific to the composition pipeline, namely re-embedding $\hat m$,
+re-binding with $\rv{r_2}$, re-unbinding from $\mem$, introduces a failure
+absent from an ordinary atomic query. Two: the specific facts that
+compositional chains pass through are harder for the memory to retrieve than
+a typical fact, a difficulty that exists at a single hop and has nothing to do
+with composition mechanics. We distinguish these using the ground-truth hop-2
+atomic-difficulty probe: we take the true chain-consistent intermediate
+$m^\star$ from the graph (bypassing hop 1 entirely) and pose $(m^\star, r_2)$
+as a standalone atomic query, identical in form to those underlying
+Table~\ref{tab:atomic}.
 
-\paragraph{The modulus probe is uninformative by construction.}
-The mean per-component modulus of the cleaned representation is $|z| = 1.0000$
-(std $0.0000$, min $=$ max $= 1.0000$) at \emph{both} hops, across all five seeds.
-The reason is architectural: the FHRR cleanup extracts the phase of the convex
-combination and re-embeds it as a unit phasor $e^{i\phi}$, so $|z| = 1$ \emph{by
-construction}. Any magnitude-based diagnostic is therefore vacuous for this model;
-the modulus-collapse narrative does not apply once cleanup re-normalises onto the
-unit torus.
+\begin{table}[H]
+\centering
+\caption{Ground-truth hop-2 facts evaluated as standalone atomic queries
+(filtered top-1), compared to the model's standard atomic test accuracy on
+the same checkpoints, over $200$ unique $(m^\star, r_2)$ queries. Mean $\pm$
+std over five seeds.}
+\label{tab:hop2atomic}
+\begin{tabular}{lccc}
+\toprule
+Model & Standard atomic Top-1 & Hop-2 fact Top-1 & Ratio \\
+\midrule
+Real HRR & $0.267_{\pm 0.002}$ & $0.070_{\pm 0.016}$ & $0.26\times$ \\
+FHRR     & $0.262_{\pm 0.017}$ & $0.126_{\pm 0.057}$ & $0.48\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{Probe 1 --- phase coherence.}
-Since magnitude is fixed, only the phase can carry information. We measure the
-phasor cosine similarity between the cleaned two-hop representation and (i) the
-\emph{true} target and (ii) a \emph{random} entity (Figure~\ref{fig:coherence}).
-Across five seeds, similarity to the true target is $-0.009 \pm 0.006$---
-statistically indistinguishable from, and on average slightly below, the
-$0.005 \pm 0.003$ to a random entity. Both are effectively zero: the cleaned
-representation retains \emph{no} directional information about the answer.
+The result is clear. Even with no hop-1 error and no composition pipeline at
+all, accuracy on the exact facts chains depend on is degraded to a quarter
+(real HRR) to a half (FHRR) of the models' accuracy on a typical atomic query.
+Stratifying by relation fan-out (median split at $37.5$) shows this degradation
+is uniform: real HRR scores $0.068$ top-1 on low-fan-out hop-2 facts and
+$0.072$ on high-fan-out ones, which rules out fan-out as the explanation. The
+failure is not concentrated in high-fan-out relations, and it is not introduced
+by the composition pipeline. It is a property of which facts are hard to retrieve
+from $\mem$, visible already at a single unbind operation.
 
-% ---------- FIGURE 4: phase coherence per seed ----------
-\begin{figure}[t]
+\paragraph{Why these specific facts are hard.}
+The facts selected by Algorithm~\ref{alg:split} are second legs of
+high-support relation chains: $r_2$ relations and $m^\star$ entities that
+participate in many chain instances, and therefore in many competing Hebbian
+terms in $\mem$. This is consistent with the $O(\sqrt{K/D})$ cross-talk noise
+scaling from Section~\ref{sec:method-algebra}: facts involving entities or
+relations with higher effective participation in the superposition are recovered
+with lower fidelity, even though the average fact (as sampled by the standard
+test set) is recovered adequately. Composition inherits this weakness by
+construction, since compositionally chained facts are precisely the
+higher-degree, more contested entries in $\mem$.
+
+\paragraph{FHRR modulus and phase probes.}
+A common intuition for phasor memories under iterated binding is modulus
+collapse: the softmax cleanup is a convex combination of unit phasors, so its
+output can have $|z| \ll 1$, decaying over hops. This turns out not to apply
+here. The mean per-component modulus of the cleaned representation is $|z| = 1.0000$
+(std $0.0000$) at both hops, across all five seeds, because the FHRR cleanup
+re-projects onto the unit torus by construction (Eq.~\ref{eq:cleanup-fhrr}).
+Magnitude-based diagnostics are vacuous.
+
+The relevant question is then whether phase information survives.
+Figure~\ref{fig:coherence} shows phasor cosine similarity between the cleaned
+two-hop representation and the true target versus a random entity. Similarity
+to the true target is $-0.009 \pm 0.006$, statistically indistinguishable from
+$0.005 \pm 0.003$ to a random entity: the cleaned representation retains no
+directional information at the final hop. The mean absolute phase error at hop
+2 is $1.59$ rad, essentially equal to the uninformative baseline
+$\pi/2 \approx 1.571$ (Figure~\ref{fig:phaseerr}); circular variance is $0.99$
+against a uniform value of $1$. Given the retrieval-capacity bottleneck
+established in Sections~\ref{sec:results-hop1} and \ref{sec:results-mechanism},
+this near-uniform phase distribution is consistent with the cleanup
+non-commutativity of Lemma~\ref{lem:softmax-noncommute} acting on an already
+degraded retrieval signal, though it is not uniquely caused by it.
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    width=\columnwidth, height=5cm,
+    width=0.9\textwidth, height=5cm,
     ybar, bar width=8pt,
     ylabel={Phasor cosine similarity},
     symbolic x coords={s1, s2, s3, s4, s42},
     xtick=data, xticklabels={seed 1, seed 2, seed 3, seed 4, seed 42},
     ymin=-0.028, ymax=0.028,
-    legend style={at={(0.5,1.16)}, anchor=north, legend columns=2, draw=none, font=\small},
+    legend style={at={(0.5,1.15)}, anchor=north, legend columns=2, draw=none, font=\small},
     enlarge x limits=0.15,
     grid=both, grid style={gray!20},
 ]
@@ -586,243 +961,270 @@ representation retains \emph{no} directional information about the answer.
     /pgf/number format/fixed, /pgf/number format/precision=3}]
     coordinates {(s1,0.0023)(s2,0.0000)(s3,0.0078)(s4,0.0073)(s42,0.0071)};
 \draw[black, thick] (axis cs:s1,0) -- (axis cs:s42,0);
-\legend{cos(clean, true), cos(clean, random)}
+\legend{{$S_\phi$(clean, true)}, {$S_\phi$(clean, random)}}
 \end{axis}
 \end{tikzpicture}
 \caption{FHRR phase coherence per seed: phasor cosine of the cleaned two-hop
-representation to the true target (green) vs.\ a random target (red). Both hover
-around zero and are statistically indistinguishable---direct evidence of phase
-decorrelation.}
+representation to the true target (green) vs.\ a random entity (red). Both hover
+near zero.}
 \label{fig:coherence}
 \end{figure}
 
-\paragraph{Probe 2 --- phase error propagation.}
-We measure the per-component absolute phase error between the cleaned
-representation and the true entity at each hop (Figure~\ref{fig:phaseerr}). The
-mean absolute error is $1.54$\,rad at hop~1 and $1.59$\,rad at hop~2, essentially
-equal to the uniform value $\pi/2 \approx 1.571$. The fraction of components with
-error beyond $\pi/2$---where cosine is uninformative---is $0.48$ and $0.51$, and
-the circular variance is $0.97$ and $0.99$ (uniform $= 1$). The cleaned phase is
-close to uniform-random already at the first hop and fully so by the second. (We
-note that the hop-1 measurement requires a ground-truth intermediate entity; when
-a head reaches several mid-entities via $r_1$ we use the first one that also
-completes the chain to the gold target, so the hop-1 number carries mild ambiguity
-for high-cardinality chains. The hop-2 measurement against the gold target, which
-drives our conclusion, does not share this ambiguity.)
-
-% ---------- FIGURE 5: phase error propagation ----------
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    width=\columnwidth, height=5cm,
+    width=0.85\textwidth, height=5cm,
     ybar, bar width=14pt,
     ylabel={Value},
     symbolic x coords={Hop 1, Hop 2},
     xtick=data,
-    ymin=0, ymax=1.75,
-    legend style={at={(0.5,1.16)}, anchor=north, legend columns=2, draw=none, font=\small},
+    ymin=0, ymax=1.95,
+    legend style={at={(0.5,1.12)}, anchor=north, legend columns=2, draw=none, font=\small},
     enlarge x limits=0.5,
     grid=both, grid style={gray!20},
 ]
-\addplot[fill=blue!55] coordinates {(Hop 1,1.537)(Hop 2,1.586)};   % MAE
-\addplot[fill=orange!70] coordinates {(Hop 1,0.973)(Hop 2,0.987)}; % circ var
+\addplot[fill=blue!55] coordinates {(Hop 1,1.537)(Hop 2,1.586)};
+\addplot[fill=orange!70] coordinates {(Hop 1,0.973)(Hop 2,0.987)};
 \draw[red, thick, dashed] (axis cs:Hop 1,1.571) -- (axis cs:Hop 2,1.571)
    node[pos=0.5, above, font=\scriptsize, red] {$\pi/2$ (uninformative)};
 \legend{Mean abs.\ phase error (rad), Circular variance}
 \end{axis}
 \end{tikzpicture}
-\caption{Phase error propagation. Mean absolute phase error (blue) sits at the
-uniform value $\pi/2$ (red dashed) at both hops; circular variance (orange)
-approaches its uniform limit of $1$. The cleaned phase carries essentially no
-target information at either hop.}
+\caption{Phase error propagation. Mean absolute phase error sits at the
+uninformative $\pi/2$ baseline at both hops; circular variance approaches $1$.}
 \label{fig:phaseerr}
 \end{figure}
 
-\paragraph{Probes 3--4 --- renormalisation and hard cleanup do not help.}
-Two interventions that would rescue a \emph{magnitude}-driven failure have no
-effect on a \emph{phase}-driven one. Explicitly re-normalising intermediate and
-final representations to unit modulus leaves zero-shot accuracy at $0.000000$;
-replacing the soft cleanup with a hard straight-through $\argmaxop$ at both hops
-likewise yields $0.000000$. Neither magnitude restoration nor sharper selection
-recovers the lost phase.
+\paragraph{Renormalisation and hard cleanup.}
+Explicitly re-normalising intermediate and final representations to unit modulus
+gives zero-shot accuracy $< 1 \times 10^{-5}$ (zero correct in $69{,}855$
+pairs). Replacing soft cleanup with hard argmax at both hops likewise gives
+zero correct answers. Neither intervention is expected to help under the
+retrieval-capacity explanation, since neither changes which facts are weakly
+represented in $\mem$.
 
-\paragraph{The paradox: atomic ranking survives near-random phase.}
-A puzzle remains: how can FHRR achieve MRR $0.350$ when even the first-hop cleaned
-phase is near uniform? The resolution is that the two tasks use different signals.
-We measured the atomic softmax \emph{margin} (gold logit minus the largest
-incorrect logit). It is negative on average ($-1.82$ for FHRR, $-1.92$ for real
-HRR), and the gold entity is the single top choice only $\approx 13$--$16\%$ of
-the time---consistent with top-1 accuracy. Yet MRR is high ($0.35$), so the gold
-entity is reliably ranked among the top few even when not first. In other words,
-atomic competence is a \emph{ranking} property recovered by integrating aggregate
-codebook similarity across all $D$ dimensions, robust to per-component phase
-noise. Composition, by contrast, feeds the cleaned intermediate back into a
-\emph{bind}, a per-component phase operation: it requires each component's phase to
-be correct, not merely the aggregate similarity to be peaked. The cleanup supplies
-the latter but not the former, so single-hop ranking survives while the second
-bind operates on phase noise.
+\paragraph{How atomic ranking survives the same capacity limit that defeats composition.}
+FHRR achieves MRR $0.350$ overall while hop-2 fact top-1 accuracy is only
+$0.126$. Here is the resolution: the atomic softmax margin (gold logit minus
+the largest incorrect logit) is negative on average ($-1.82$ for FHRR, $-1.92$
+for real HRR), and the gold entity is top-1 only $\approx 13$ to $16\%$ of the
+time on the full test set, consistent with Table~\ref{tab:atomic}. Yet MRR
+stays high because the gold entity is reliably ranked among the top few even
+when it is not first. Composition has no such tolerance: a near-miss in the
+final ranking is scored as a hard failure. The same capacity limitation that
+costs ordinary atomic queries a few ranks costs compositional queries the
+entire prediction.
 
-\paragraph{An untrained control isolates training from architecture.}
-A freshly initialised FHRR has atomic accuracy $\approx 0$ while the trained model
-reaches $0.126 \pm 0.001$---training clearly helps single-hop retrieval. Yet both
-are equally at chance on the two-hop task. Optimisation buys atomic competence but
-never composition; the limitation is a property of the architecture, not of the
-training run.
+\paragraph{Untrained control.}
+A freshly initialised FHRR has atomic accuracy $\approx 0$ while the trained
+model reaches $0.126 \pm 0.001$; training helps single-hop retrieval. Yet both
+are equally at chance on two-hop composition. Training buys average atomic
+competence but does not differentially improve retrieval of the specific,
+higher-contention facts composition depends on.
 
 % ============================================================
 \section{Discussion}
 \label{sec:discussion}
 % ============================================================
 
-\paragraph{Why the phase is lost.}
-Each unbinding from the superposed memory $M$ injects cross-talk from every other
-stored fact. The Hopfield cleanup is strong enough to rank the correct entity from
-this noisy estimate---hence atomic retrieval works in the ranking sense---but the
-phasor it emits is reconstructed from a softmax-weighted average whose
-per-component phase is close to uniform. Binding is a per-component phase
-operation, so feeding this phase-incoherent intermediate into the second bind
-compounds noise rather than signal, and the second unbinding adds a fresh layer of
-cross-talk. By the final cleanup the angular signal that should point at the
-target has been averaged away. The unit-modulus constraint that makes FHRR elegant
-for a single binding is precisely what removes the magnitude headroom that might
-otherwise have flagged low confidence, leaving a confident-looking but
-directionless phasor.
+The central finding is that zero-shot compositional failure in holographic
+memory is a single-hop retrieval-capacity problem, not a multi-hop or
+cleanup-algebra problem. Hop-1 retrieval succeeds with high fidelity; composition
+fails even with a correct intermediate; and the ground-truth hop-2 fact, posed
+as a standalone atomic query with no composition involved, is already degraded
+to $0.26$ to $0.48\times$ the typical atomic accuracy, uniformly across relation
+fan-out. The facts compositional reasoning depends on are, by the same construction
+that makes them compositionally useful, exactly the higher-degree facts that
+suffer the most cross-talk under superposition. The right question for future
+work is therefore not whether a cleanup operator can be made compositionally
+consistent, but whether a fixed-width superposed memory can retrieve
+high-degree facts with high fidelity at all, before any query composition happens.
 
-\paragraph{Real HRR fails too.}
-Real HRR also fails at two-hop composition. We did not isolate a single clean
-mechanism comparable to the FHRR phase analysis; the likeliest explanation is the
-same accumulation of memory cross-talk across hops, here as additive noise rather
-than phase mixing. We avoid over-attributing the small atomic gap between the
-models, since they also differ in representation; a full mechanistic account of
-real-HRR composition failure is left open.
+Lemma~\ref{lem:softmax-noncommute} identifies a genuine structural property of
+the softmax-cleanup-plus-phase-reprojection pipeline in FHRR, and the phase
+probes show it plausibly compounds the primary failure on the roughly $20\%$ of
+chains where hop-1 retrieval is imperfect. But it is not the primary cause. The
+dominant contributor is a retrieval-capacity effect already measurable at a
+single hop, before cleanup non-commutativity has a chance to act.
 
-\paragraph{Implications.}
-Our findings caution against two intuitions. First, competitive single-hop
-performance of a holographic memory does \emph{not} imply any capacity for
-zero-shot composition; the two are decoupled here. Second, the ``modulus
-collapse'' picture is not universal: once a cleanup re-normalises onto the unit
-torus, magnitude is fixed and the relevant failure is in the phase. Architectures
-intending to compose with phasor memories will need mechanisms that explicitly
-preserve phase coherence across hops---e.g.\ per-hop error correction,
-confidence-aware cleanup that retains magnitude, or memory structures that reduce
-inter-fact cross-talk.
+Three intuitions deserve caution in light of these results. First, competitive
+single-hop \emph{aggregate} performance does not imply that any individual
+fact, especially the high-degree facts compositional reasoning depends on, is
+retrieved reliably; aggregate metrics like MRR can mask substantial per-fact
+variation. Second, the modulus collapse intuition does not apply once cleanup
+re-normalises onto the unit torus; the relevant question then is whether
+retrieval succeeds upstream of cleanup. Third, and most concretely, a correct
+intermediate entity is not informative about whether composition will succeed.
+The conditional accuracies in Table~\ref{tab:conditional} differ by less than a
+factor of three between the valid- and invalid-intermediate partitions, a much
+smaller gap than one might expect if intermediate correctness were the dominant
+factor.
 
-\paragraph{Limitations.}
-This study is deliberately controlled and therefore narrow.
-(i)~We evaluate on a single real dataset (FB15k-237); behaviour on sparser graphs
-(WN18RR) or small ontologies (UMLS) may differ and is future work.
-(ii)~The baseline figures in Table~\ref{tab:atomic} are representative literature
-values, not a controlled re-implementation; the atomic comparison is indicative
-only, and we do not claim to beat any baseline.
-(iii)~We do not compare against trained compositional methods
-(e.g.\ Guu et al.~\cite{guu2015traversing}); our question is whether holographic
-binding \emph{alone} composes, and the answer is negative.
-(iv)~We study two-hop chains over ten high-frequency relation pairs; deeper or more
-diverse compositions, and a breakdown by relation cardinality (1-1/1-N/N-N), are
-untested.
-(v)~The hop-1 phase-error measurement uses an approximate ground-truth
-intermediate when a head reaches multiple mid-entities; the hop-2 measurement,
-which drives our conclusion, does not. None of these caveats affects the central
-result---chance-level composition with a phase-localised mechanism for FHRR---but
-they bound its scope.
+% ============================================================
+\section{Limitations}
+\label{sec:limitations}
+% ============================================================
+
+This study evaluates a specific pipeline on a single benchmark. We test only
+two-hop chains; the retrieval-capacity effect identified here should compound
+with chain length, since each additional hop queries another potentially
+high-contention fact. Results on sparser graphs (e.g.\
+WN18RR~\cite{dettmers2018wn18rr}) or under explicit multi-hop protocols (e.g.\
+NELL-995~\cite{xiong2017deeppath}) may differ quantitatively; we predict the
+capacity effect to be less severe there, given fewer superposed facts per
+dimension. We do not empirically test a phase-equivariant cleanup or a memory
+architecture with explicitly allocated capacity, such as per-relation
+sub-memories, that might reduce the cross-talk effect. The hop-2
+atomic-difficulty probe uses $200$ unique $(m^\star, r_2)$ queries, fewer than
+the $20{,}466$-query standard test set; the effect size is large and consistent
+across all five seeds, but a larger replication would sharpen the estimate. The
+training objective targets single-hop retrieval; an objective that explicitly
+up-weights high-degree or chain-relevant facts might partially compensate,
+though we have not tested this.
 
 % ============================================================
 \section{Conclusion}
 \label{sec:conclusion}
 % ============================================================
-We studied holographic memory with a modern Hopfield cleanup as a candidate for
-zero-shot compositional reasoning in knowledge graphs. Both real and Fourier
-variants proved competitive single-hop retrievers in the ranking sense (filtered
-MRR $0.358$ and $0.350$), with the Hopfield cleanup responsible for about half of
-the achieved accuracy. Yet both failed at two-hop zero-shot composition, at
-statistically chance accuracy and independent of cleanup temperature. Our main
-contribution is mechanistic: the commonly assumed modulus-collapse explanation is
-inapplicable to a cleanup that re-normalises onto the unit torus, and \emph{phase
-decorrelation} is the operative failure mode for FHRR---the cleaned two-hop
-representation carries no more target information than a random entity, with phase
-error at the uniform $\pi/2$ limit. We resolve the apparent paradox that atomic
-ranking survives this near-random phase: single-hop readout integrates aggregate
-similarity, whereas the second bind demands per-component phase coherence the
-cleanup does not provide. We hope this sharpens the target for future
-compositional reasoners: preserve phase coherence, not merely magnitude, across
-hops.
+
+Holographic reduced representations paired with modern Hopfield cleanup are
+competitive single-hop retrievers on FB15k-237 but fail completely at zero-shot
+two-hop composition. Two targeted mechanistic probes localise the failure: the
+intermediate entity is retrieved with high fidelity at hop 1, yet composition
+fails even when that intermediate is verified correct, and the ground-truth
+second-hop fact, evaluated as a standalone atomic query with no composition
+involved, is retrieved at only $0.26$ to $0.48\times$ the typical atomic
+accuracy, uniformly across relation fan-out. The bottleneck is retrieval
+capacity under superposition for the specific, higher-contention facts
+compositional chains depend on, not the bind-unbind algebra or the cleanup
+step. We additionally prove (Lemma~\ref{lem:softmax-noncommute}) that FHRR's
+softmax cleanup is not phase-equivariant, a real but secondary effect that
+compounds the primary failure only when hop-1 retrieval itself errs. Fixing
+zero-shot composition in holographic memory requires addressing retrieval
+fidelity for high-degree facts under superposition, through explicit capacity
+allocation or chain-aware training, rather than cleanup-operator redesign alone.
 
 % ============================================================
-\section*{Acknowledgments}
-We thank \href{https://modal.com}{Modal} for providing \$30 in free GPU compute
-credits (A10G), which enabled all experiments in this paper.
-
 \section*{Reproducibility Statement}
 % ============================================================
-All results derive from five fixed-seed checkpoints ($\{1,2,3,4,42\}$) under the
-leakage-controlled protocol of Algorithm~\ref{alg:split}. Atomic metrics use the
-filtered convention on the full $20{,}466$-query test set. The phase-coherence and
-phase-error probes, the modulus probe, the softmax-margin analysis, the
-temperature sweep, the binomial test, and the untrained control are all computed
-by inference over the stored checkpoints. Hyperparameters are in
-Section~\ref{sec:setup}. Code and configurations will be released at
+All results derive from five fixed-seed checkpoints under the leakage-controlled
+protocol of Algorithm~\ref{alg:split}. Atomic metrics use the filtered
+convention on the full $20{,}466$-query test set. The hop-1 retrieval probe,
+the composition-conditional probe, and the hop-2 atomic-difficulty probe
+(Section~\ref{sec:probes-mechanism}) are all inference-only over the same five
+checkpoints, with no additional training. Phase probes, modulus probes, softmax
+margins, temperature sweeps, binomial tests, and untrained controls are likewise
+computed by inference over stored checkpoints. Code, configurations, and all
+probe scripts are released at
 \url{https://github.com/iamhero2709/holographic-memory}.
-% Replace with actual repo link before submission
 
 % ============================================================
 \begin{thebibliography}{99}
 % ============================================================
+
+\bibitem{arakelyan2021complex}
+E.~Arakelyan, D.~Daza, P.~Minervini, and M.~Cochez.
+\newblock Complex query answering with neural link predictors.
+\newblock In \emph{ICLR}, 2021.
 
 \bibitem{bordes2013transe}
 A.~Bordes, N.~Usunier, A.~Garcia-Dur\'an, J.~Weston, and O.~Yakhnenko.
 \newblock Translating embeddings for modeling multi-relational data.
 \newblock In \emph{NeurIPS}, 2013.
 
-\bibitem{yang2014distmult}
-B.~Yang, W.~Yih, X.~He, J.~Gao, and L.~Deng.
-\newblock Embedding entities and relations for learning and inference in knowledge bases.
-\newblock In \emph{ICLR}, 2015.
+\bibitem{dettmers2018wn18rr}
+T.~Dettmers, P.~Minervini, P.~Stenetorp, and S.~Riedel.
+\newblock Convolutional 2D knowledge graph embeddings.
+\newblock In \emph{AAAI}, 2018.
 
-\bibitem{trouillon2016complex}
-T.~Trouillon, J.~Welbl, S.~Riedel, \'E.~Gaussier, and G.~Bouchard.
-\newblock Complex embeddings for simple link prediction.
-\newblock In \emph{ICML}, 2016.
-
-\bibitem{sun2019rotate}
-Z.~Sun, Z.-H.~Deng, J.-Y.~Nie, and J.~Tang.
-\newblock RotatE: Knowledge graph embedding by relational rotation in complex space.
-\newblock In \emph{ICLR}, 2019.
-
-\bibitem{plate2003holographic}
-T.~A.~Plate.
-\newblock \emph{Holographic Reduced Representation: Distributed Representation for Cognitive Structures}.
-\newblock CSLI Publications, 2003.
-
-\bibitem{kanerva2009hyperdimensional}
-P.~Kanerva.
-\newblock Hyperdimensional computing: An introduction to computing in distributed representation with high-dimensional random vectors.
-\newblock \emph{Cognitive Computation}, 1(2):139--159, 2009.
-
-\bibitem{schlegel2022comparison}
-K.~Schlegel, P.~Neubert, and P.~Protzel.
-\newblock A comparison of vector symbolic architectures.
-\newblock \emph{Artificial Intelligence Review}, 55:4523--4555, 2022.
-
-\bibitem{ramsauer2021hopfield}
-H.~Ramsauer, B.~Sch\"afl, J.~Lehner, P.~Seidl, M.~Widrich, et al.
-\newblock Hopfield networks is all you need.
-\newblock In \emph{ICLR}, 2021.
+\bibitem{frady2020resonator}
+E.~P.~Frady, S.~J.~Kent, B.~A.~Olshausen, and F.~T.~Sommer.
+\newblock Resonator networks, 1: An efficient solution for factoring
+high-dimensional, distributed representations of data structures.
+\newblock \emph{Neural Computation}, 32(12):2311--2331, 2020.
 
 \bibitem{guu2015traversing}
 K.~Guu, J.~Miller, and P.~Liang.
 \newblock Traversing knowledge graphs in vector space.
 \newblock In \emph{EMNLP}, 2015.
 
-\bibitem{yang2017neurallp}
-F.~Yang, Z.~Yang, and W.~W.~Cohen.
-\newblock Differentiable learning of logical rules for knowledge base reasoning.
-\newblock In \emph{NeurIPS}, 2017.
+\bibitem{kanerva2009hyperdimensional}
+P.~Kanerva.
+\newblock Hyperdimensional computing: An introduction to computing in
+distributed representation with high-dimensional random vectors.
+\newblock \emph{Cognitive Computation}, 1(2):139--159, 2009.
+
+\bibitem{plate2003holographic}
+T.~A.~Plate.
+\newblock \emph{Holographic Reduced Representation: Distributed Representation
+for Cognitive Structures}.
+\newblock CSLI Publications, 2003.
 
 \bibitem{qu2021rnnlogic}
 M.~Qu, J.~Chen, L.-P.~Xhonneux, Y.~Bengio, and J.~Tang.
 \newblock RNNLogic: Learning logic rules for reasoning on knowledge graphs.
 \newblock In \emph{ICLR}, 2021.
+
+\bibitem{ramsauer2021hopfield}
+H.~Ramsauer, B.~Sch\"afl, J.~Lehner, P.~Seidl, M.~Widrich, et al.
+\newblock Hopfield networks is all you need.
+\newblock In \emph{ICLR}, 2021.
+
+\bibitem{ren2020beta}
+H.~Ren and J.~Leskovec.
+\newblock Beta embeddings for multi-hop logical reasoning in knowledge graphs.
+\newblock In \emph{NeurIPS}, 2020.
+
+\bibitem{ren2020query2box}
+H.~Ren, W.~Hu, and J.~Leskovec.
+\newblock Query2box: Reasoning over knowledge graphs in vector space using box
+embeddings.
+\newblock In \emph{ICLR}, 2020.
+
+\bibitem{schlegel2022comparison}
+K.~Schlegel, P.~Neubert, and P.~Protzel.
+\newblock A comparison of vector symbolic architectures.
+\newblock \emph{Artificial Intelligence Review}, 55:4523--4555, 2022.
+
+\bibitem{smolensky1990tensor}
+P.~Smolensky.
+\newblock Tensor product variable binding and the representation of symbolic
+structures in connectionist systems.
+\newblock \emph{Artificial Intelligence}, 46(1--2):159--216, 1990.
+
+\bibitem{sun2019rotate}
+Z.~Sun, Z.-H.~Deng, J.-Y.~Nie, and J.~Tang.
+\newblock RotatE: Knowledge graph embedding by relational rotation in complex
+space.
+\newblock In \emph{ICLR}, 2019.
+
+\bibitem{toutanova2015observed}
+K.~Toutanova, D.~Chen, P.~Pantel, H.~Poon, P.~Choudhury, and M.~Gamon.
+\newblock Representing text for joint embedding of text and knowledge bases.
+\newblock In \emph{EMNLP}, 2015.
+
+\bibitem{trouillon2016complex}
+T.~Trouillon, J.~Welbl, S.~Riedel, \'E.~Gaussier, and G.~Bouchard.
+\newblock Complex embeddings for simple link prediction.
+\newblock In \emph{ICML}, 2016.
+
+\bibitem{xiong2017deeppath}
+W.~Xiong, T.~Hoang, and W.~Y.~Wang.
+\newblock DeepPath: A reinforcement learning method for knowledge graph
+reasoning.
+\newblock In \emph{EMNLP}, 2017.
+
+\bibitem{yang2014distmult}
+B.~Yang, W.~Yih, X.~He, J.~Gao, and L.~Deng.
+\newblock Embedding entities and relations for learning and inference in
+knowledge bases.
+\newblock In \emph{ICLR}, 2015.
+
+\bibitem{yang2017neurallp}
+F.~Yang, Z.~Yang, and W.~W.~Cohen.
+\newblock Differentiable learning of logical rules for knowledge base reasoning.
+\newblock In \emph{NeurIPS}, 2017.
 
 \end{thebibliography}
 

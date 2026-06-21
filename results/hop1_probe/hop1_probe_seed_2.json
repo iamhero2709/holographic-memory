@@ -1,0 +1,44 @@
+{
+  "seed": 2,
+  "vocab": 14778,
+  "n_zeroshot": 69855,
+  "chance": 6.766815536608472e-05,
+  "real_hrr": {
+    "hop1_mid": {
+      "n_pairs": 2020,
+      "mrr": 0.8968813526481615,
+      "h1": 0.846039603960396,
+      "h3": 0.9386138613861386,
+      "h10": 0.9801980198019802,
+      "median_rank": 1.0
+    },
+    "composition": {
+      "comp_acc_deterministic": 0.00031493808603535897,
+      "frac_mid_valid_atomic": 0.14285305275212942,
+      "frac_mid_valid_chain": 0.08055257318731658,
+      "comp_acc_given_mid_valid": 0.0003006313257841467,
+      "comp_acc_given_mid_invalid": 0.0003173224664306233,
+      "n_mid_valid": 9979,
+      "n_mid_invalid": 59876
+    }
+  },
+  "fhrr": {
+    "hop1_mid": {
+      "n_pairs": 2020,
+      "mrr": 0.8344951930562498,
+      "h1": 0.7608910891089109,
+      "h3": 0.8965346534653466,
+      "h10": 0.9534653465346534,
+      "median_rank": 1.0
+    },
+    "composition": {
+      "comp_acc_deterministic": 0.00021473051320592657,
+      "frac_mid_valid_atomic": 0.1559229833225968,
+      "frac_mid_valid_chain": 0.03689070216877818,
+      "comp_acc_given_mid_valid": 0.0012853470437017994,
+      "comp_acc_given_mid_invalid": 1.6959788341841495e-05,
+      "n_mid_valid": 10892,
+      "n_mid_invalid": 58963
+    }
+  }
+}
